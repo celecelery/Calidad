@@ -1,0 +1,82 @@
+name: Defecto
+description: Algo no funciona como dice la Especificación de Requisitos. Debe incluir criterios de aceptación.
+title: "[Defecto] "
+labels: ["defecto"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usa esta plantilla para reportar un defecto. Los **criterios de aceptación son obligatorios** (métrica **M-04**).
+        Si la severidad es **Crítica**, agrega también la etiqueta `crítico`: la métrica **M-03** (defectos críticos abiertos, meta = 0) cuenta los issues abiertos con esa etiqueta, y un solo crítico abierto pone el proyecto en Rojo.
+        Después de crear el issue, agrega la etiqueta del módulo correspondiente.
+
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: Módulo
+      options:
+        - Módulo 1 — Registro de proyectos
+        - Módulo 2 — Seguimiento de métricas
+        - Módulo 3 — Gestión de técnicas SQA
+        - Módulo 4 — Reportes de salud
+        - Transversal (sesión, perfiles, despliegue, documentación)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severidad
+    attributes:
+      label: Severidad
+      description: Crítica = impide usar una función principal, pierde o corrompe datos, o es un problema de seguridad.
+      options:
+        - Crítica
+        - Mayor
+        - Menor
+    validations:
+      required: true
+
+  - type: input
+    id: requisito
+    attributes:
+      label: Requisito afectado
+      description: ID de la Especificación de Requisitos (RF-xx / RNF-xx), si aplica.
+      placeholder: "RF-08"
+    validations:
+      required: false
+
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducir
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Resultado esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Resultado actual
+      description: Incluye mensajes de error o capturas si las hay.
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: Condiciones verificables para dar el defecto por corregido. Una por línea.
+      value: |
+        - [ ] El resultado esperado se cumple siguiendo los pasos para reproducir
+        - [ ] Existe una prueba automatizada que cubre el caso
+    validations:
+      required: true
