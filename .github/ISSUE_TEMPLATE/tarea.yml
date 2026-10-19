@@ -1,0 +1,60 @@
+name: Tarea
+description: Trabajo planeado (funcionalidad, documentación, configuración). Debe incluir criterios de aceptación.
+title: "[Tarea] "
+labels: ["tarea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Usa esta plantilla para trabajo planeado. Los **criterios de aceptación son obligatorios**: la métrica **M-04** (issues con criterios de aceptación / issues totales × 100, meta ≥ 90%) se calcula con esta sección.
+        Después de crear el issue, agrega la etiqueta del módulo correspondiente.
+
+  - type: input
+    id: requisito
+    attributes:
+      label: Requisito relacionado
+      description: ID de la Especificación de Requisitos (RF-xx / RNF-xx), si aplica.
+      placeholder: "RF-01"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: modulo
+    attributes:
+      label: Módulo
+      options:
+        - Módulo 1 — Registro de proyectos
+        - Módulo 2 — Seguimiento de métricas
+        - Módulo 3 — Gestión de técnicas SQA
+        - Módulo 4 — Reportes de salud
+        - Transversal (sesión, perfiles, despliegue, documentación)
+    validations:
+      required: true
+
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: Qué hay que hacer y por qué.
+    validations:
+      required: true
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: Criterios de aceptación
+      description: Condiciones verificables que deben cumplirse para cerrar el issue. Una por línea.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+
+  - type: input
+    id: checkin
+    attributes:
+      label: Check-in
+      description: Fecha de entrega en la que debe estar listo.
+      placeholder: "20 oct / 3 nov / 19 nov"
+    validations:
+      required: false
