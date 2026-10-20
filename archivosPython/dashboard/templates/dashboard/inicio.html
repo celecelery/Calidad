@@ -6,6 +6,11 @@
     <title>Mi dashboard</title>
 </head>
 <body>
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit">Cerrar sesión</button>
+    </form>
+
     <h1>Panel de análisis</h1>
 
     {% load plotly_dash %}
