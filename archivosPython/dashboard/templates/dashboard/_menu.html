@@ -1,0 +1,15 @@
+{# Menú de navegación compartido. Se incluye arriba de cada página con {% include "dashboard/_menu.html" %} #}
+{% with actual=request.resolver_match.url_name %}
+<nav style="display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; padding: .75rem 1rem; margin: -8px -8px 1.5rem; background: #1e3a5f; font-family: Arial, sans-serif;">
+    <strong style="color: #fff; margin-right: .5rem;">Dashboard SQA</strong>
+    <a href="{% url 'inicio' %}" style="color: #fff;{% if actual == 'inicio' %} text-decoration: underline; font-weight: bold;{% else %} text-decoration: none;{% endif %}">Inicio</a>
+    <a href="{% url 'lista_proyectos' %}" style="color: #fff;{% if actual == 'lista_proyectos' or actual == 'editar_proyecto' %} text-decoration: underline; font-weight: bold;{% else %} text-decoration: none;{% endif %}">Proyectos</a>
+    <a href="{% url 'proyecto_nuevo' %}" style="color: #fff;{% if actual == 'proyecto_nuevo' %} text-decoration: underline; font-weight: bold;{% else %} text-decoration: none;{% endif %}">Registrar proyecto</a>
+    <a href="{% url 'periodo_nuevo' %}" style="color: #fff;{% if actual == 'periodo_nuevo' %} text-decoration: underline; font-weight: bold;{% else %} text-decoration: none;{% endif %}">Registrar periodo</a>
+    <span style="margin-left: auto; color: #cbd5e1;">{{ user.get_username }}</span>
+    <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit">Cerrar sesión</button>
+    </form>
+</nav>
+{% endwith %}
