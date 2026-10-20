@@ -10,6 +10,9 @@ jobs:
   calidad:
     name: Ruff, pruebas y cobertura
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: archivosPython   
     steps:
       - uses: actions/checkout@v4
 
@@ -17,6 +20,7 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
+          cache-dependency-path: archivosPython/requirements.txt   
 
       - name: Instalar dependencias
         run: |
