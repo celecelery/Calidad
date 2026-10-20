@@ -1,5 +1,7 @@
 from django.shortcuts import render
-from . import plotly_app  # Registra la aplicación Dash
+
+from . import plotly_app  # noqa: F401  (registra la aplicación Dash)
+
 # Create your views here.
 
 

@@ -1,7 +1,7 @@
-from django_plotly_dash import DjangoDash
-from dash import dcc, html, Input, Output
-import plotly.express as px
 import pandas as pd
+import plotly.express as px
+from dash import Input, Output, dcc, html
+from django_plotly_dash import DjangoDash
 
 # Crear la aplicación Dash
 app = DjangoDash("MiDashboard")
