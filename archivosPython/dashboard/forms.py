@@ -1,5 +1,7 @@
 from django import forms
-from .models import *
+
+from .models import Periodo, Proyecto
+
 
 class PeriodoForm(forms.ModelForm):
     class Meta:

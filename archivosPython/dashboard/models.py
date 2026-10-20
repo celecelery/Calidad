@@ -1,5 +1,8 @@
 from django.db import models
+
 # Create your models here.
+
+
 class Usuario(models.Model):
     id_usuario = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150, verbose_name="Nombre")
@@ -21,7 +24,7 @@ class Periodo(models.Model):
 
 class Proyecto(models.Model):
     # En el diagrama, 'Nombre' está subrayado dentro del rectángulo del proyecto.
-    pk = models.CompositePrimaryKey("nombre", "id_periodo")
+    #pk = models.CompositePrimaryKey("nombre", "id_periodo")
 
     nombre = models.CharField(
         max_length=150, verbose_name="Nombre del Proyecto"
@@ -48,6 +51,14 @@ class Proyecto(models.Model):
 
     def __str__(self):
         return self.nombre
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["nombre", "periodo"],
+                name="proyecto_nombre_unico_por_periodo",
+            )
+        ]
 
 
 class ReporteSalud(models.Model):
@@ -101,25 +112,19 @@ class AplicacionTecnica(models.Model):
         return f"Aplicación {self.id_aplicacion} ({self.resultado})"
 
 class AsignacionTecnica(models.Model):
-
-    pk = models.CompositePrimaryKey("id_tecnica", "id_proyecto", "id_periodo", "id_usuario", "id_aplicacion")
     # Relación que involucra a Proyecto, TécnicasSQA y Usuario con el atributo 'Frecuencia'
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
     tecnica = models.ForeignKey(TecnicaSQA, on_delete=models.CASCADE)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
     frecuencia = models.CharField(max_length=50, verbose_name="Frecuencia")
 
-    # Vinculación directa con la asignación o técnica correspondiente
-    asignacion_tecnica = models.ForeignKey(
-        AplicacionTecnica,
-        on_delete=models.CASCADE,
-        related_name="aplicaciones",
-        verbose_name="Asignación Técnica",
-    )
-
     class Meta:
-        verbose_name = "Asignación Técnica"
-        verbose_name_plural = "Asignaciones Técnicas"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["proyecto", "tecnica", "usuario"],
+                name="asignacion_unica",
+            )
+        ]
 
 class Metrica(models.Model):
     id_metrica = models.AutoField(primary_key=True)
@@ -137,7 +142,7 @@ class Metrica(models.Model):
 
 class MetricaProyecto(models.Model):
     # Relación 'Métrica_Proyecto' con atributos adicionales 'Valor' y 'Corte'
-    pk = models.CompositePrimaryKey("id_metrica", "id_periodo", "id_proyecto")
+    #pk = models.CompositePrimaryKey("id_metrica", "id_periodo", "id_proyecto")
 
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
     metrica = models.ForeignKey(Metrica, on_delete=models.CASCADE)
@@ -147,3 +152,9 @@ class MetricaProyecto(models.Model):
     class Meta:
         verbose_name = "Métrica de Proyecto"
         verbose_name_plural = "Métricas de Proyecto"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["proyecto", "metrica", "corte"],
+                name="medicion_unica_por_corte",
+            )
+        ]
