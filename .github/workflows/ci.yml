@@ -10,6 +10,9 @@ jobs:
   calidad:
     name: Ruff, pruebas y cobertura
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: clave-solo-para-ci-no-es-secreta
+      DEBUG: "True"
     defaults:
       run:
         working-directory: archivosPython   

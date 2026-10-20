@@ -1,3 +1,8 @@
 from django.test import TestCase
+from django.urls import reverse
 
-# Create your tests here.
+
+class InicioTests(TestCase):
+    def test_pagina_dash_carga(self):
+        respuesta = self.client.get(reverse("inicio"))
+        self.assertEqual(respuesta.status_code, 200)
