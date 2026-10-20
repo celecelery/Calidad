@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Editar proyecto</title>
+</head>
+<body>
+    {% include "dashboard/_menu.html" %}
+
+    <h1>Editar proyecto</h1>
+
+    {% if formulario.non_field_errors %}
+        <div class="errores">{{ formulario.non_field_errors }}</div>
+    {% endif %}
+
+    {# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% for campo in formulario %}
+            <p>
+                <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+                {{ campo }}
+                {% for error in campo.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </p>
+        {% endfor %}
+        <button type="submit">Guardar cambios</button>
+        <a href="{% url 'lista_proyectos' %}">Cancelar</a>
+    </form>
+</body>
+</html>
