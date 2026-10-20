@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Registrar proyecto</title>
+</head>
+<body>
+    <p><a href="{% url 'inicio' %}">Volver al dashboard</a></p>
+
+    <h1>Registrar proyecto</h1>
+
+    {% for mensaje in messages %}
+        <p class="exito">{{ mensaje }}</p>
+    {% endfor %}
+
+    {% if formulario.non_field_errors %}
+        <div class="errores">{{ formulario.non_field_errors }}</div>
+    {% endif %}
+
+    {# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% for campo in formulario %}
+            <p>
+                <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+                {{ campo }}
+                {% for error in campo.errors %}
+                    <span class="error">{{ error }}</span>
+                {% endfor %}
+            </p>
+        {% endfor %}
+        <button type="submit">Guardar proyecto</button>
+    </form>
+</body>
+</html>
