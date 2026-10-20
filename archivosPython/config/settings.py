@@ -122,6 +122,20 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# django-plotly-dash: Django sirve los archivos JS/CSS de Dash (por ejemplo plotly.min.js).
+# Sin esto, las gráficas no se dibujan porque el navegador recibe un 404.
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "django_plotly_dash.finders.DashAssetFinder",
+    "django_plotly_dash.finders.DashComponentFinder",
+    "django_plotly_dash.finders.DashAppDirectoryFinder",
+]
+
+PLOTLY_COMPONENTS = [
+    "dpd_components",
+]
+
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration

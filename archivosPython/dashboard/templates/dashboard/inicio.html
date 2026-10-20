@@ -3,15 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mi dashboard</title>
+    <title>Inicio · Dashboard SQA</title>
 </head>
 <body>
-    <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit">Cerrar sesión</button>
-    </form>
+    {% include "dashboard/_menu.html" %}
 
-    <h1>Panel de análisis</h1>
+    <h1>Inicio</h1>
 
     {% load plotly_dash %}
 

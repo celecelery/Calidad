@@ -5,4 +5,5 @@ omit =
     config/wsgi.py
     */migrations/*
     */tests.py
+    */test_*.py
     venv/*

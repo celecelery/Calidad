@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Proyectos</title>
+    <style>
+        form.filtros { margin-bottom: 1rem; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid #ddd; }
+        th { background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    {% include "dashboard/_menu.html" %}
+
+    <h1>Proyectos</h1>
+
+    {% for mensaje in messages %}
+        <p class="exito">{{ mensaje }}</p>
+    {% endfor %}
+
+    {# RF-04: los dos filtros se combinan #}
+    <form method="get" class="filtros">
+        <label for="{{ filtro.periodo.id_for_label }}">Periodo</label>
+        {{ filtro.periodo }}
+        <label for="{{ filtro.estado.id_for_label }}">Estado</label>
+        {{ filtro.estado }}
+        <button type="submit">Filtrar</button>
+        <a href="{% url 'lista_proyectos' %}">Quitar filtros</a>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Periodo</th>
+                <th>Líder</th>
+                <th>Integrantes</th>
+                <th>Estado</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for proyecto in proyectos %}
+                <tr>
+                    <td>{{ proyecto.nombre }}</td>
+                    <td>{{ proyecto.periodo }}</td>
+                    <td>{{ proyecto.lider }}</td>
+                    <td>{{ proyecto.integrantes }}</td>
+                    <td>{{ proyecto.estado }}</td>
+                    <td><a href="{% url 'editar_proyecto' proyecto.pk %}">Editar</a></td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6">No hay proyectos que coincidan con los filtros.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

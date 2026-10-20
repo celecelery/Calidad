@@ -23,6 +23,10 @@ class Periodo(models.Model):
 
 
 class Proyecto(models.Model):
+    class Estado(models.TextChoices):
+        ACTIVO = "Activo", "Activo"
+        ARCHIVADO = "Archivado", "Archivado"
+
     # En el diagrama, 'Nombre' está subrayado dentro del rectángulo del proyecto.
     #pk = models.CompositePrimaryKey("nombre", "id_periodo")
 
@@ -31,7 +35,12 @@ class Proyecto(models.Model):
     )
     integrantes = models.IntegerField(verbose_name="Integrantes")
     descripcion = models.TextField(verbose_name="Descripción")
-    estado = models.CharField(max_length=50, verbose_name="Estado")
+    estado = models.CharField(
+        max_length=50,
+        choices=Estado.choices,
+        default=Estado.ACTIVO,
+        verbose_name="Estado",
+    )
 
     # Relación 'Lidera' con Usuario (1 a N: un usuario lidera varios proyectos)
     lider = models.ForeignKey(
@@ -83,33 +92,15 @@ class ReporteSalud(models.Model):
 
 class TecnicaSQA(models.Model):
     id_tecnica = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=150, default="", verbose_name="Nombre")
     descripcion = models.TextField(verbose_name="Descripción")
     referencia_norma = models.CharField(
         max_length=150, verbose_name="Referencia de Norma"
     )
 
     def __str__(self):
-        return f"Técnica SQA {self.id_tecnica}"
+        return self.nombre or f"Técnica SQA {self.id_tecnica}"
 
-
-class AplicacionTecnica(models.Model):
-    id_aplicacion = models.AutoField(primary_key=True)
-    fecha = models.DateField(verbose_name="Fecha")
-    evidencia = models.TextField(verbose_name="Evidencia")
-    resultado = models.CharField(max_length=100, verbose_name="Resultado")
-
-    # Relación 'Registrada_Por' con Usuario
-    registrada_por = models.ForeignKey(
-        Usuario,
-        on_delete=models.CASCADE,
-        related_name="aplicaciones_registradas",
-        verbose_name="Registrada por",
-    )
-
-    
-
-    def __str__(self):
-        return f"Aplicación {self.id_aplicacion} ({self.resultado})"
 
 class AsignacionTecnica(models.Model):
     # Relación que involucra a Proyecto, TécnicasSQA y Usuario con el atributo 'Frecuencia'
@@ -126,13 +117,41 @@ class AsignacionTecnica(models.Model):
             )
         ]
 
+class AplicacionTecnica(models.Model):
+    id_aplicacion = models.AutoField(primary_key=True)
+    fecha = models.DateField(verbose_name="Fecha")
+    evidencia = models.TextField(verbose_name="Evidencia")
+    resultado = models.CharField(max_length=100, verbose_name="Resultado")
+
+    # Relación con Asignación_Técnica: qué técnica se aplicó y en qué proyecto (RF-13).
+    asignacion = models.ForeignKey(
+        "AsignacionTecnica",
+        on_delete=models.CASCADE,
+        related_name="aplicaciones",
+        verbose_name="Asignación",
+    )
+
+    # Relación 'Registrada_Por' con Usuario
+    registrada_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="aplicaciones_registradas",
+        verbose_name="Registrada por",
+    )
+
+    
+
+    def __str__(self):
+        return f"Aplicación {self.id_aplicacion} ({self.resultado})"
+
+
 class Metrica(models.Model):
     id_metrica = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, verbose_name="Nombre")
     unidad = models.CharField(max_length=50, verbose_name="Unidad")
     tipo = models.CharField(max_length=50, verbose_name="Tipo")
     formula = models.TextField(verbose_name="Fórmula")
-    meta = models.CharField(max_length=100, verbose_name="Meta")
+    meta = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Meta")
     fuente = models.CharField(max_length=100, verbose_name="Fuente")
     sentido = models.CharField(max_length=50, verbose_name="Sentido")
 
@@ -146,7 +165,7 @@ class MetricaProyecto(models.Model):
 
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
     metrica = models.ForeignKey(Metrica, on_delete=models.CASCADE)
-    valor = models.CharField(max_length=100, verbose_name="Valor")
+    valor = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor")
     corte = models.CharField(max_length=50, verbose_name="Corte")
 
     class Meta:

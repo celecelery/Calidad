@@ -109,3 +109,19 @@ class ProyectoForm(forms.ModelForm):
                     "Ya existe un proyecto con ese nombre en el periodo seleccionado.",
                 )
         return datos
+
+
+class FiltroProyectosForm(forms.Form):
+    """RF-04: filtros de la lista de proyectos por periodo y estado."""
+
+    periodo = forms.ModelChoiceField(
+        queryset=Periodo.objects.all(),
+        required=False,
+        empty_label="Todos los periodos",
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    estado = forms.ChoiceField(
+        choices=[("", "Todos los estados"), *Proyecto.Estado.choices],
+        required=False,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
