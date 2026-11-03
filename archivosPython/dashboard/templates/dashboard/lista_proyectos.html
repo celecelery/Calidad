@@ -33,15 +33,9 @@
                     <td>{% if proyecto.estado == "Archivado" %}{{ proyecto.nombre }}{% else %}<b>{{ proyecto.nombre }}</b>{% endif %}</td>
                     <td>{{ proyecto.periodo }}</td>
                     <td>{{ proyecto.lider }}</td>
-                    <td class="num">{{ proyecto.integrantes }}</td>
-                    <td><span class="pill gray">{{ proyecto.estado }}</span></td>
-                    <td>
-                        <div class="actions">
-                            <a class="btn sm" href="{% url 'editar_proyecto' proyecto.pk %}">Editar</a>
-                            <a class="btn sm" href="{% url 'metricas_proyecto' proyecto.pk %}">Mediciones</a>
-                            <a class="btn sm" href="{% url 'tecnicas_proyecto' proyecto.pk %}">Técnicas</a>
-                        </div>
-                    </td>
+                    <td>{{ proyecto.integrantes }}</td>
+                    <td>{{ proyecto.estado }}</td>
+                    <td><a href="{% url 'editar_proyecto' proyecto.pk %}">Editar</a></td>
                 </tr>
             {% empty %}
                 <tr><td class="rn"></td><td colspan="6" class="muted">No hay proyectos que coincidan con los filtros.</td></tr>

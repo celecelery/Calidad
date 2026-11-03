@@ -5,7 +5,7 @@ Se actualiza en cada PR que implementa o cambia un requisito.
 
 **Estados:** Pendiente · En progreso · Implementado (fusionado en main con pruebas en verde) · Verificado (además pasó la revisión de QA)
 
-**Última actualización:** 20/10/2026 — cierre del sprint 1 (check-in del 20 de octubre)
+**Última actualización:** 02/11/2026 — RF-06 y RF-07 fusionados (#13); tarea 7.2, RF-08 en progreso
 
 ## Requisitos funcionales
 
@@ -16,9 +16,9 @@ Se actualiza en cada PR que implementa o cambia un requisito.
 | RF-03 | Editar los datos de un proyecto sin afectar a otros | 20 oct | Sin issue (por crear) | #11 | `dashboard/test_proyectos.py`: `EditarProyectoTests` | Verificado |
 | RF-04 | Listar proyectos filtrando por periodo y estado | 20 oct | Sin issue (por crear) | #11 | `dashboard/test_proyectos.py`: `ListaProyectosTests` | Verificado |
 | RF-05 | Archivar un proyecto sin borrarlo | 3 nov | — | #11 (solo el estado "Archivado" en el modelo) | — | En progreso |
-| RF-06 | Administrar el catálogo de métricas | 3 nov | — | — | — | Pendiente |
-| RF-07 | Asignar las 6 métricas base a un proyecto nuevo | 3 nov | — | — | — | Pendiente |
-| RF-08 | Capturar la medición de una métrica en un corte | 3 nov | — | — | — | Pendiente |
+| RF-06 | Administrar el catálogo de métricas | 3 nov | Por crear | #13 | `dashboard/test_metricas.py`: `MetricaFormTests`, `CatalogoVistasTests`, `MetaTextoTests`, `CumpleMetaTests` | Implementado |
+| RF-07 | Asignar las 6 métricas base a un proyecto nuevo | 3 nov | Por crear | #13 | `dashboard/test_metricas.py`: `MetricasBaseTests`, `AsignacionMetricasTests` | Implementado |
+| RF-08 | Capturar la medición de una métrica en un corte | 3 nov | Por crear | Por crear (rama `feature/rf-08-mediciones`, tarea 7.2) | `dashboard/test_mediciones.py`: `MedicionFormTests`, `CorteFormTests`, `CapturarMedicionVistaTests`, `AgregarCorteVistaTests`, `TablaMedicionesTests` | En progreso |
 | RF-09 | Graficar la evolución de cada métrica contra su meta | 3 nov | — | — | — | Pendiente |
 | RF-10 | Resumen de proyectos activos con semáforo en el dashboard | 3 nov | — | — | — | Pendiente |
 | RF-11 | Catálogo de técnicas SQA (al menos 8 precargadas) | 3 nov | — | — | — | Pendiente |

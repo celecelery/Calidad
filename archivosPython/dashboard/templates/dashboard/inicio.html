@@ -1,17 +1,20 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Inicio · Dashboard SQA</title>
-</head>
-<body>
-    {% include "dashboard/_menu.html" %}
+{% extends "dashboard/base.html" %}
+{% load plotly_dash %}
 
-    <h1>Inicio</h1>
+{% block titulo %}Inicio{% endblock %}
 
-    {% load plotly_dash %}
+{% block contenido %}
+<div class="page-head">
+    <div>
+        <div class="crumbs">Inicio</div>
+        <h1>Inicio</h1>
+    </div>
+    <div class="actions"><a class="btn primary" href="{% url 'proyecto_nuevo' %}">+ Registrar proyecto</a></div>
+</div>
 
-    {% plotly_app name="MiDashboard" ratio=0.6 %}
-</body>
-</html>
+<div class="card">
+    <div class="card-b">
+        {% plotly_app name="MiDashboard" ratio=0.6 %}
+    </div>
+</div>
+{% endblock %}

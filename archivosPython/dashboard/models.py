@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.db.models.functions import Lower
 
@@ -229,55 +230,39 @@ class Metrica(models.Model):
     tipo = models.CharField(max_length=50, choices=Tipo.choices, verbose_name="Tipo")
     formula = models.TextField(verbose_name="Fórmula")
     meta = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Meta")
-    fuente = models.CharField(max_length=100, blank=True, verbose_name="Fuente")
-    sentido = models.CharField(
-        max_length=2,
-        choices=Sentido.choices,
-        default=Sentido.MAYOR_IGUAL,
-        verbose_name="Sentido de la meta",
-    )
-    # RF-07: las métricas base se asignan solas a cada proyecto nuevo.
-    es_base = models.BooleanField(default=False, verbose_name="Métrica base")
-
-    class Meta:
-        ordering = ["-es_base", "clave", "nombre"]
+    fuente = models.CharField(max_length=100, verbose_name="Fuente")
+    sentido = models.CharField(max_length=50, verbose_name="Sentido")
 
     def __str__(self):
-        return f"{self.clave} {self.nombre}" if self.clave else self.nombre
-
-    @property
-    def meta_corta(self):
-        """Meta con su sentido, como en los mockups: «≥ 70», «≤ 0», «= 100» (100 % no se rebasa)."""
-        if self.sentido == self.Sentido.MENOR_IGUAL:
-            simbolo = "≤"
-        elif self.unidad == self.Unidad.PORCENTAJE and self.meta == 100:
-            simbolo = "="
-        else:
-            simbolo = "≥"
-        return f"{simbolo} {self.meta.normalize():f}"
-
-    @property
-    def meta_texto(self):
-        """Meta con sentido y, si es porcentaje, su unidad: «≥ 70 %», «≤ 0»."""
-        if self.unidad == self.Unidad.PORCENTAJE:
-            return f"{self.meta_corta} %"
-        return self.meta_corta
-
-    def cumple(self, valor):
-        """Indica si un valor medido alcanza la meta según el sentido de la métrica."""
-        if self.sentido == self.Sentido.MENOR_IGUAL:
-            return valor <= self.meta
-        return valor >= self.meta
+        return self.nombre
 
 
 class MetricaProyecto(models.Model):
-    # Relación 'Métrica_Proyecto' con atributos adicionales 'Valor' y 'Corte'
+    # Relación 'Métrica_Proyecto' con atributos adicionales 'Valor' y 'Corte' (RF-08: medición)
     #pk = models.CompositePrimaryKey("id_metrica", "id_periodo", "id_proyecto")
 
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
     metrica = models.ForeignKey(Metrica, on_delete=models.CASCADE)
     valor = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor")
-    corte = models.CharField(max_length=50, verbose_name="Corte")
+    corte = models.ForeignKey(
+        Corte, on_delete=models.CASCADE, related_name="mediciones", verbose_name="Corte"
+    )
+    # Columna «Capturó» del mockup de Mediciones.
+    capturado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="mediciones_capturadas",
+        verbose_name="Capturó",
+    )
+    capturado_en = models.DateTimeField(auto_now=True, verbose_name="Fecha de captura")
+
+    @property
+    def valor_texto(self):
+        """Valor como en el mockup: «58 %», «2»."""
+        valor = f"{self.valor.normalize():f}"
+        return f"{valor} %" if self.metrica.unidad == Metrica.Unidad.PORCENTAJE else valor
 
     class Meta:
         verbose_name = "Métrica de Proyecto"

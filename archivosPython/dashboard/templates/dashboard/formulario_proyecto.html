@@ -1,36 +1,51 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Registrar proyecto</title>
-</head>
-<body>
-    {% include "dashboard/_menu.html" %}
+{% extends "dashboard/base.html" %}
 
-    <h1>Registrar proyecto</h1>
+{% block titulo %}Registrar proyecto{% endblock %}
 
-    {% for mensaje in messages %}
-        <p class="exito">{{ mensaje }}</p>
-    {% endfor %}
+{% block contenido %}
+<div class="page-head">
+    <div>
+        <div class="crumbs"><a href="{% url 'inicio' %}">Inicio</a> / <a href="{% url 'lista_proyectos' %}">Proyectos</a> / Registrar</div>
+        <h1>Registrar proyecto</h1>
+        <div class="sub">Los campos con <span class="req">*</span> son obligatorios.</div>
+    </div>
+</div>
 
-    {% if formulario.non_field_errors %}
-        <div class="errores">{{ formulario.non_field_errors }}</div>
-    {% endif %}
-
+<div class="split">
     {# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
-    <form method="post" novalidate>
+    <form class="card" method="post" novalidate>
         {% csrf_token %}
-        {% for campo in formulario %}
-            <p>
-                <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
-                {{ campo }}
-                {% for error in campo.errors %}
-                    <span class="error">{{ error }}</span>
-                {% endfor %}
-            </p>
-        {% endfor %}
-        <button type="submit">Guardar proyecto</button>
+        <div class="card-h"><h2>Datos del proyecto</h2></div>
+        <div class="card-b">
+            {% include "dashboard/_campos_formulario.html" %}
+            <div class="form-foot">
+                <a class="btn" href="{% url 'lista_proyectos' %}">Cancelar</a>
+                <button class="btn primary" type="submit">Guardar proyecto</button>
+            </div>
+        </div>
     </form>
-</body>
-</html>
+
+    {# RF-07: lo que recibe el proyecto al guardarse #}
+    <div class="stack">
+        <div class="card">
+            <div class="card-h"><h2>Al guardar</h2></div>
+            <div class="card-b stack" style="gap: 10px; font-size: 13px;">
+                <p style="margin: 0;">El proyecto queda <b>Activo</b> y recibe las {{ metricas_base|length }} métricas base del catálogo:</p>
+                <div class="table-wrap">
+                    <table class="sheet" style="min-width: 0;">
+                        <thead><tr><th>ID</th><th>Métrica</th><th class="num">Meta</th></tr></thead>
+                        <tbody>
+                            {% for metrica in metricas_base %}
+                                <tr><td class="nw">{{ metrica.clave }}</td><td>{{ metrica.nombre }}</td><td class="num">{{ metrica.meta_texto }}</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="help" style="margin: 0;">Después puedes asignarle o quitarle métricas desde la pestaña Mediciones del proyecto.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block estado %}{% if formulario.errors %}{{ formulario.errors|length }} error{{ formulario.errors|length|pluralize:"es" }} en el formulario{% else %}Modo edición{% endif %}{% endblock %}

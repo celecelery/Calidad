@@ -1,36 +1,26 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Registrar periodo</title>
-</head>
-<body>
-    {% include "dashboard/_menu.html" %}
+{% extends "dashboard/base.html" %}
 
-    <h1>Registrar periodo</h1>
+{% block titulo %}Periodos{% endblock %}
 
-    {% for mensaje in messages %}
-        <p class="exito">{{ mensaje }}</p>
-    {% endfor %}
+{% block contenido %}
+<div class="page-head">
+    <div>
+        <div class="crumbs">Administración / Periodos</div>
+        <h1>Registrar periodo</h1>
+        <div class="sub">Los campos con <span class="req">*</span> son obligatorios.</div>
+    </div>
+</div>
 
-    {% if formulario.non_field_errors %}
-        <div class="errores">{{ formulario.non_field_errors }}</div>
-    {% endif %}
-
-    {# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
-    <form method="post" novalidate>
-        {% csrf_token %}
-        {% for campo in formulario %}
-            <p>
-                <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
-                {{ campo }}
-                {% for error in campo.errors %}
-                    <span class="error">{{ error }}</span>
-                {% endfor %}
-            </p>
-        {% endfor %}
-        <button type="submit">Guardar periodo</button>
-    </form>
-</body>
-</html>
+{# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
+<form class="card" method="post" novalidate>
+    {% csrf_token %}
+    <div class="card-h"><h2>Datos del periodo</h2></div>
+    <div class="card-b">
+        {% include "dashboard/_campos_formulario.html" %}
+        <div class="form-foot">
+            <a class="btn" href="{% url 'lista_proyectos' %}">Cancelar</a>
+            <button class="btn primary" type="submit">Guardar periodo</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

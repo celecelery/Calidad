@@ -1,0 +1,159 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Mediciones — {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+{% include "dashboard/_pestanas_proyecto.html" with activa="mediciones" %}
+
+{# RF-08, según el mockup «Captura de mediciones». novalidate: valida el servidor (RNF-04) #}
+<form class="card" method="post" action="{% url 'capturar_medicion' proyecto.pk %}" novalidate style="margin-bottom: 18px;">
+    {% csrf_token %}
+    <div class="card-h"><h2>Capturar medición</h2><span class="help">Un valor por métrica y corte</span></div>
+    <div class="card-b">
+        {% if not metricas %}
+            <div class="alert warn">El proyecto no tiene métricas asignadas. Asígnale una abajo para poder capturar.</div>
+        {% endif %}
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="field">
+                <label for="med_proyecto">Proyecto</label>
+                <input class="input" id="med_proyecto" type="text" value="{{ proyecto.nombre }}" readonly>
+            </div>
+            {% with campo=form_medicion.corte %}
+            <div class="field{% if campo.errors %} con-error{% endif %}">
+                <label for="{{ campo.id_for_label }}">{{ campo.label }} <span class="req">*</span></label>
+                <div style="display: flex; gap: 8px;">
+                    {{ campo }}
+                    <a class="btn" href="#nuevo-corte" data-abrir="nuevo-corte" aria-label="Agregar un corte nuevo" title="Agregar un corte nuevo" style="padding: 0 14px;">+</a>
+                </div>
+                {% for error in campo.errors %}<span class="err-msg">{{ error }}</span>{% endfor %}
+            </div>
+            {% endwith %}
+            {% include "dashboard/_campo.html" with campo=form_medicion.metrica %}
+            {% with campo=form_medicion.valor %}
+            <div class="field{% if campo.errors %} con-error{% endif %}">
+                <label for="{{ campo.id_for_label }}">{{ campo.label }} <span class="req">*</span></label>
+                <div class="with-unit">{{ campo }}<span class="unit" id="med_unidad"></span></div>
+                {% for error in campo.errors %}<span class="err-msg">{{ error }}</span>{% endfor %}
+            </div>
+            {% endwith %}
+        </div>
+        <div class="fx" style="margin-top: 14px;"><span class="fx-l">fx</span><span class="fx-v" id="med_fx">Selecciona una métrica para ver su fórmula y su meta.</span></div>
+        <div class="form-foot">
+            <a class="btn" href="{% url 'metricas_proyecto' proyecto.pk %}">Cancelar</a>
+            <button class="btn primary" type="submit">Guardar medición</button>
+        </div>
+    </div>
+</form>
+
+{# «+» del campo Corte: agrega una fecha de corte dentro del periodo del proyecto #}
+<details class="card plegable" id="nuevo-corte" {% if abrir_corte %}open{% endif %} style="margin-bottom: 18px;">
+    <summary class="card-h"><h2>Agregar corte</h2><span class="help">{{ proyecto.periodo }}: {{ proyecto.periodo.fecha_inicio|date:"d/m/Y" }} – {{ proyecto.periodo.fecha_fin|date:"d/m/Y" }}</span></summary>
+    <form class="card-b" method="post" action="{% url 'agregar_corte' proyecto.pk %}" novalidate>
+        {% csrf_token %}
+        {% if not cortes %}<p class="help" style="margin: 0 0 12px;">Todavía no hay cortes. Agrega el primero para empezar a capturar.</p>{% endif %}
+        <div class="form-grid" style="grid-template-columns: minmax(0, 320px) auto; align-items: end; justify-content: start;">
+            {% include "dashboard/_campo.html" with campo=form_corte.fecha %}
+            <button class="btn primary" type="submit">Agregar corte</button>
+        </div>
+    </form>
+</details>
+
+<div class="page-head" style="margin-bottom: 10px;">
+    <h2>Mediciones del periodo</h2>
+    <div class="actions" style="font-size: 12px; gap: 14px;">
+        <span style="display: inline-flex; gap: 6px; align-items: center;"><span class="pill good">✓</span>cumple la meta</span>
+        <span style="display: inline-flex; gap: 6px; align-items: center;"><span class="pill bad">✗</span>no cumple</span>
+    </div>
+</div>
+<div class="table-wrap">
+    <table class="sheet">
+        <thead>
+            <tr>
+                <th class="rn"></th><th>Métrica</th><th class="num">Meta</th>
+                {% for c in cortes %}<th class="num">Corte {{ c.numero }} · {{ c.corte.fecha|date:"d/m" }}</th>{% endfor %}
+                {% if ultimo %}<th>Capturó (corte {{ cortes|length }})</th>{% endif %}
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in filas %}
+                <tr>
+                    <td class="rn">{{ forloop.counter }}</td>
+                    <td>{% if fila.metrica.clave %}<b>{{ fila.metrica.clave }}</b> {% endif %}{{ fila.metrica.nombre }}</td>
+                    <td class="num">{{ fila.metrica.meta_texto }}</td>
+                    {% for celda in fila.celdas %}
+                        <td class="num{% if celda.medicion %}{% if celda.cumple %} good{% else %} bad{% endif %}{% endif %}{% if celda.seleccionada %} sel{% endif %}"
+                            {% if celda.medicion %}title="{% if celda.cumple %}Cumple{% else %}No cumple{% endif %} la meta"{% endif %}>
+                            {% if celda.medicion %}{{ celda.medicion.valor_texto }}{% else %}—{% endif %}
+                        </td>
+                    {% endfor %}
+                    {% if ultimo %}
+                        <td{% if not fila.ultima %} class="muted"{% endif %}>
+                            {% if fila.ultima %}{{ fila.ultima.capturado_por.get_full_name|default:fila.ultima.capturado_por.get_username|default:"—" }}{% else %}Pendiente{% endif %}
+                        </td>
+                    {% endif %}
+                    <td>
+                        <form method="post" action="{% url 'quitar_metrica' proyecto.pk fila.metrica.pk %}">
+                            {% csrf_token %}
+                            <button class="btn sm" type="submit" title="Quitar la métrica del proyecto (no borra sus mediciones)">Quitar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td class="rn"></td><td colspan="{{ cortes|length|add:4 }}" class="muted">El proyecto no tiene métricas asignadas.</td></tr>
+            {% endfor %}
+            {% if filas and cortes %}
+                <tr class="total">
+                    <td class="rn"></td><td>Metas cumplidas</td><td></td>
+                    {% for total in totales %}<td class="num">{{ total.cumplidas }} / {{ total.capturadas }}</td>{% endfor %}
+                    <td class="muted">{% if pendientes_ultimo %}{{ pendientes_ultimo }} pendiente{{ pendientes_ultimo|pluralize }}{% else %}Completo{% endif %}</td>
+                    <td></td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+<p class="help" style="margin: 10px 0 18px;">
+    Metas cumplidas = mediciones que alcanzan su meta / mediciones capturadas en ese corte.
+    Capturar otra vez la misma métrica en el mismo corte corrige el valor.
+</p>
+
+{# RF-07: asignar una métrica del catálogo; «Quitar» está en cada fila de la tabla #}
+<form class="card" method="post" action="{% url 'metricas_proyecto' proyecto.pk %}" novalidate>
+    {% csrf_token %}
+    <div class="card-h"><h2>Asignar métrica</h2><span class="help">Un proyecto nuevo ya trae las 6 métricas base (M-01 a M-06)</span></div>
+    <div class="card-b">
+        <div class="form-grid" style="grid-template-columns: minmax(0, 1fr) auto; align-items: end;">
+            {% include "dashboard/_campo.html" with campo=form_asignar.metrica %}
+            <button class="btn" type="submit">Asignar</button>
+        </div>
+    </div>
+</form>
+
+{{ detalle_metricas|json_script:"detalle-metricas" }}
+<script>
+    // La línea fx y la unidad del valor siguen a la métrica elegida (solo presentación;
+    // el rango se valida en el servidor).
+    (function () {
+        var detalle = JSON.parse(document.getElementById("detalle-metricas").textContent);
+        var metrica = document.getElementById("{{ form_medicion.metrica.id_for_label }}");
+        var fx = document.getElementById("med_fx");
+        var unidad = document.getElementById("med_unidad");
+        function actualizar() {
+            var d = detalle[metrica.value];
+            fx.textContent = d ? d.fx : "Selecciona una métrica para ver su fórmula y su meta.";
+            unidad.textContent = d ? d.unidad : "";
+        }
+        metrica.addEventListener("change", actualizar);
+        actualizar();
+        document.querySelectorAll("[data-abrir]").forEach(function (enlace) {
+            enlace.addEventListener("click", function () {
+                document.getElementById(enlace.dataset.abrir).open = true;
+            });
+        });
+    })();
+</script>
+{% endblock %}
+
+{% block estado %}{% if form_medicion.errors %}{{ form_medicion.errors|length }} error{{ form_medicion.errors|length|pluralize:"es" }} en la captura{% elif ultimo %}Último corte: {{ ultimo.etiqueta }}{% else %}Sin cortes todavía{% endif %}{% endblock %}
+{% block estado_derecha %}{% if ultimo %}{% with total=totales|last %}{{ total.capturadas }} de {{ metricas|length }} mediciones capturadas en el corte {{ cortes|length }}{% endwith %}{% else %}{{ metricas|length }} métrica{{ metricas|length|pluralize }} asignada{{ metricas|length|pluralize }}{% endif %}{% endblock %}
