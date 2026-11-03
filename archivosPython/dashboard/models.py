@@ -14,7 +14,12 @@ class Usuario(models.Model):
 
     id_usuario = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150, verbose_name="Nombre")
-    perfil = models.CharField(max_length=100, verbose_name="Perfil", choices=PERFIL_CHOICES, default='miembro')
+    perfil = models.CharField(
+        max_length=100,
+        verbose_name="Perfil",
+        choices=PERFIL_CHOICES,
+        default='miembro',
+    )
 
     def __str__(self):
         return self.nombre
