@@ -171,7 +171,8 @@ class MenuNavegacionTests(ProyectosBaseTest):
             reverse("proyecto_nuevo"),
             reverse("periodo_nuevo"),
         ]
-        ligas = ["lista_proyectos", "proyecto_nuevo", "periodo_nuevo", "inicio"]
+        # Menú lateral de los mockups; «Registrar proyecto» es un botón de Inicio y Proyectos.
+        ligas = ["lista_proyectos", "periodo_nuevo", "inicio", "lista_metricas"]
         for pagina in paginas:
             with self.subTest(pagina=pagina):
                 respuesta = self.client.get(pagina)

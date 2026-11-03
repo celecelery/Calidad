@@ -1,0 +1,15 @@
+{# Campos de un formulario en rejilla, como en los mockups. Se incluye dentro de un <form>. #}
+{% if formulario.non_field_errors %}
+    <div class="alert bad">{{ formulario.non_field_errors }}</div>
+{% endif %}
+<div class="form-grid">
+    {% for campo in formulario %}
+        <div class="field{% if campo.name == 'nombre' or campo.name == 'descripcion' %} full{% endif %}{% if campo.errors %} con-error{% endif %}">
+            <label for="{{ campo.id_for_label }}">{{ campo.label }}{% if campo.field.required %} <span class="req">*</span>{% endif %}</label>
+            {{ campo }}
+            {% for error in campo.errors %}
+                <span class="err-msg">{{ error }}</span>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</div>

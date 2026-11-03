@@ -1,9 +1,16 @@
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
 from . import plotly_app  # noqa: F401  (registra la aplicación Dash)
-from .forms import FiltroProyectosForm, PeriodoForm, ProyectoForm
-from .models import Proyecto
+from .forms import (
+    AsignarMetricaForm,
+    FiltroProyectosForm,
+    MetricaForm,
+    PeriodoForm,
+    ProyectoForm,
+)
+from .models import Metrica, Proyecto
 
 
 def periodo_view(request):
@@ -33,7 +40,12 @@ def proyecto_view(request):
     else:
         formulario = ProyectoForm()
 
-    return render(request, "dashboard/formulario_proyecto.html", {"formulario": formulario})
+    # RF-07: el mockup muestra al lado las métricas base que recibirá el proyecto.
+    return render(
+        request,
+        "dashboard/formulario_proyecto.html",
+        {"formulario": formulario, "metricas_base": Metrica.objects.filter(es_base=True)},
+    )
 
 
 def lista_proyectos(request):
@@ -58,7 +70,7 @@ def lista_proyectos(request):
 
 def editar_proyecto(request, pk):
     """RF-03: editar los datos de un proyecto; solo se modifica ese proyecto."""
-    proyecto = get_object_or_404(Proyecto, pk=pk)
+    proyecto = get_object_or_404(Proyecto.objects.select_related("periodo", "lider"), pk=pk)
 
     if request.method == "POST":
         formulario = ProyectoForm(request.POST, instance=proyecto)
@@ -74,6 +86,56 @@ def editar_proyecto(request, pk):
         "dashboard/editar_proyecto.html",
         {"formulario": formulario, "proyecto": proyecto},
     )
+
+
+def metricas_view(request, pk=None):
+    """RF-06: catálogo de métricas con el formulario al lado (nueva o la seleccionada)."""
+    metrica = get_object_or_404(Metrica, pk=pk) if pk else None
+
+    if request.method == "POST":
+        formulario = MetricaForm(request.POST, instance=metrica)
+        if formulario.is_valid():
+            guardada = formulario.save()
+            accion = "actualizada" if metrica else "registrada"
+            messages.success(request, f"Métrica «{guardada.nombre}» {accion}.")
+            return redirect("editar_metrica", pk=guardada.pk)
+    else:
+        formulario = MetricaForm(instance=metrica)
+
+    return render(
+        request,
+        "dashboard/lista_metricas.html",
+        {"metricas": Metrica.objects.all(), "formulario": formulario, "metrica": metrica},
+    )
+
+
+def metricas_proyecto(request, pk):
+    """RF-07: métricas asignadas a un proyecto y formulario para asignar otra."""
+    proyecto = get_object_or_404(Proyecto.objects.select_related("periodo", "lider"), pk=pk)
+    datos = request.POST if request.method == "POST" else None
+    formulario = AsignarMetricaForm(datos, proyecto=proyecto)
+
+    if formulario.is_valid():
+        metrica = formulario.cleaned_data["metrica"]
+        proyecto.metricas.add(metrica)
+        messages.success(request, f"Métrica «{metrica}» asignada a «{proyecto.nombre}».")
+        return redirect("metricas_proyecto", pk=proyecto.pk)
+
+    return render(
+        request,
+        "dashboard/metricas_proyecto.html",
+        {"formulario": formulario, "proyecto": proyecto, "metricas": proyecto.metricas.all()},
+    )
+
+
+@require_POST
+def quitar_metrica(request, pk, metrica_pk):
+    """RF-07: quitar una métrica de un proyecto; no la borra del catálogo ni de otros proyectos."""
+    proyecto = get_object_or_404(Proyecto, pk=pk)
+    metrica = get_object_or_404(proyecto.metricas, pk=metrica_pk)
+    proyecto.metricas.remove(metrica)
+    messages.success(request, f"Métrica «{metrica}» quitada de «{proyecto.nombre}».")
+    return redirect("metricas_proyecto", pk=proyecto.pk)
 
 
 def inicio(request):

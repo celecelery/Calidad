@@ -1,0 +1,55 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Mediciones — {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+{% include "dashboard/_pestanas_proyecto.html" with activa="mediciones" %}
+
+{# RF-07, en la pestaña Mediciones del mockup: las métricas que se le miden a este proyecto #}
+<form class="card" method="post" novalidate style="margin-bottom: 18px;">
+    {% csrf_token %}
+    <div class="card-h"><h2>Asignar métrica</h2><span class="help">Solo aparecen las métricas que el proyecto todavía no tiene</span></div>
+    <div class="card-b">
+        <div class="form-grid" style="grid-template-columns: minmax(0, 1fr) auto; align-items: end;">
+            {% include "dashboard/_campo.html" with campo=formulario.metrica %}
+            <button class="btn primary" type="submit">Asignar</button>
+        </div>
+    </div>
+</form>
+
+<div class="page-head" style="margin-bottom: 10px;">
+    <h2>Métricas del proyecto</h2>
+</div>
+<div class="table-wrap">
+    <table class="sheet">
+        <thead>
+            <tr><th class="rn"></th><th>Métrica</th><th>Tipo</th><th class="num">Meta</th><th>Fuente</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+            {% for metrica in metricas %}
+                <tr>
+                    <td class="rn">{{ forloop.counter }}</td>
+                    <td>{% if metrica.clave %}<b>{{ metrica.clave }}</b> {% endif %}{{ metrica.nombre }}</td>
+                    <td>{{ metrica.tipo }}</td>
+                    <td class="num">{{ metrica.meta_texto }}</td>
+                    <td>{{ metrica.fuente|default:"—" }}</td>
+                    <td>
+                        <form method="post" action="{% url 'quitar_metrica' proyecto.pk metrica.pk %}">
+                            {% csrf_token %}
+                            <button class="btn sm" type="submit">Quitar</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td class="rn"></td><td colspan="5" class="muted">El proyecto no tiene métricas asignadas.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="help" style="margin: 10px 0 0;">
+    Un proyecto nuevo recibe las 6 métricas base (M-01 a M-06). Quitar una métrica no la borra del catálogo ni de otros proyectos.
+    La captura de mediciones por corte llega con RF-08.
+</p>
+{% endblock %}
+
+{% block estado_derecha %}{{ metricas|length }} métrica{{ metricas|length|pluralize }} asignada{{ metricas|length|pluralize }}{% endblock %}

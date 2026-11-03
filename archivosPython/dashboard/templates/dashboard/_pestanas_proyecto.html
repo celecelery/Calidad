@@ -1,0 +1,17 @@
+{# Encabezado y pestañas de un proyecto (mockups de Mediciones, Evolución, Técnicas y Reporte). #}
+{# Se incluye con {% include "dashboard/_pestanas_proyecto.html" with activa="mediciones" migas="Mediciones" %} #}
+<div class="page-head">
+    <div>
+        <div class="crumbs"><a href="{% url 'lista_proyectos' %}">Proyectos</a> / {{ proyecto.nombre }}</div>
+        <h1>{{ proyecto.nombre }}</h1>
+        <div class="sub">{{ proyecto.periodo }} · Líder: {{ proyecto.lider }} · <span class="pill gray">{{ proyecto.estado }}</span></div>
+    </div>
+</div>
+<nav class="tabs" aria-label="Secciones del proyecto">
+    <a class="tab{% if activa == 'datos' %} on{% endif %}" href="{% url 'editar_proyecto' proyecto.pk %}" {% if activa == 'datos' %}aria-current="page"{% endif %}>Datos</a>
+    <a class="tab{% if activa == 'mediciones' %} on{% endif %}" href="{% url 'metricas_proyecto' proyecto.pk %}" {% if activa == 'mediciones' %}aria-current="page"{% endif %}>Mediciones</a>
+    <span class="tab off" aria-disabled="true" title="Próximamente (RF-09)">Evolución</span>
+    <span class="tab off" aria-disabled="true" title="Próximamente (RF-12)">Técnicas SQA</span>
+    <span class="tab off" aria-disabled="true" title="Próximamente (RF-15)">Reporte de salud</span>
+    <span class="tab off" aria-disabled="true" title="Próximamente (RF-18)">Historial</span>
+</nav>
