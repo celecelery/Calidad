@@ -1,28 +1,45 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Iniciar sesión</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Iniciar sesión · Dashboard SQA</title>
+    {# Misma hoja de estilos que el resto de la aplicación (mockup «Iniciar sesión») #}
+    <link rel="stylesheet" href="{% static 'dashboard/sqa.css' %}">
 </head>
 <body>
-  <h1>Iniciar sesión</h1>
+<div class="app">
+    <header class="topbar">
+        <span class="brand"><span class="brand-mark">SQA</span>Dashboard de Monitoreo SQA</span>
+    </header>
 
-  {% if form.errors %}
-    <p>Usuario o contraseña incorrectos. Inténtalo de nuevo.</p>
-  {% endif %}
+    <main class="login">
+        {# RF-19: sin sesión, cualquier pantalla del sistema redirige aquí #}
+        <form class="card login-card" method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            <h1>Iniciar sesión</h1>
+            <p class="sub">Centro de control de calidad para equipos de desarrollo.</p>
 
-  <form method="post">
-    {% csrf_token %}
-    <p>
-      <label for="id_username">Usuario</label>
-      {{ form.username }}
-    </p>
-    <p>
-      <label for="id_password">Contraseña</label>
-      {{ form.password }}
-    </p>
-    <button type="submit">Entrar</button>
-  </form>
+            {% for error in form.non_field_errors %}
+                <div class="alert bad" role="alert">{{ error }}</div>
+            {% endfor %}
+
+            {% for campo in form %}
+                <div class="field{% if campo.errors %} con-error{% endif %}">
+                    <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+                    {{ campo }}
+                    {% for error in campo.errors %}<span class="err-msg">{{ error }}</span>{% endfor %}
+                </div>
+            {% endfor %}
+
+            <button class="btn primary" type="submit">Iniciar sesión</button>
+            <p class="help login-ayuda">¿No tienes cuenta? Pídele al administrador del periodo que te registre.</p>
+        </form>
+        <p class="help">Sin sesión, cualquier pantalla del sistema regresa aquí.</p>
+    </main>
+
+    <footer class="statusbar"><span>Listo</span><span>Dashboard de Monitoreo SQA</span></footer>
+</div>
 </body>
 </html>
