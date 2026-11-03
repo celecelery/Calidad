@@ -40,6 +40,13 @@
                             <a class="btn sm" href="{% url 'editar_proyecto' proyecto.pk %}">Editar</a>
                             <a class="btn sm" href="{% url 'metricas_proyecto' proyecto.pk %}">Mediciones</a>
                             <a class="btn sm" href="{% url 'tecnicas_proyecto' proyecto.pk %}">Técnicas</a>
+                            {% if proyecto.estado == "Archivado" %}
+                                {# RF-05: un archivado se puede reactivar (mockup «Proyectos») #}
+                                <form method="post" action="{% url 'reactivar_proyecto' proyecto.pk %}">
+                                    {% csrf_token %}
+                                    <button class="btn sm" type="submit">Reactivar</button>
+                                </form>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>

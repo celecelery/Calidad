@@ -71,6 +71,20 @@ class Proyecto(models.Model):
     def __str__(self):
         return self.nombre
 
+    @property
+    def archivado(self):
+        return self.estado == self.Estado.ARCHIVADO
+
+    def archivar(self):
+        """RF-05: archiva el proyecto sin borrarlo; conserva mediciones, técnicas y reportes."""
+        self.estado = self.Estado.ARCHIVADO
+        self.save(update_fields=["estado"])
+
+    def reactivar(self):
+        """RF-05: devuelve un proyecto archivado al dashboard."""
+        self.estado = self.Estado.ACTIVO
+        self.save(update_fields=["estado"])
+
     def save(self, *args, **kwargs):
         # RF-07: un proyecto nuevo recibe por defecto las métricas base (M-01 a M-06).
         es_nuevo = self._state.adding
@@ -179,10 +193,21 @@ class AsignacionTecnica(models.Model):
         return f"{self.tecnica} en {self.proyecto} ({self.frecuencia})"
 
 class AplicacionTecnica(models.Model):
+    """RF-13: constancia de que una técnica asignada se aplicó en el proyecto."""
+
+    class Resultado(models.TextChoices):
+        FAVORABLE = "Favorable", "Favorable"
+        MIXTO = "Mixto", "Mixto"
+        NO_IDEAL = "No ideal", "No ideal"
+
     id_aplicacion = models.AutoField(primary_key=True)
-    fecha = models.DateField(verbose_name="Fecha")
-    evidencia = models.TextField(verbose_name="Evidencia")
-    resultado = models.CharField(max_length=100, verbose_name="Resultado")
+    fecha = models.DateField(verbose_name="Fecha de aplicación")
+    # RF-13, criterio de aceptación: no se guarda sin enlace de evidencia (acta, PR, checklist...).
+    evidencia = models.URLField(max_length=500, verbose_name="Enlace de evidencia")
+    resultado = models.CharField(
+        max_length=100, choices=Resultado.choices, verbose_name="Resultado"
+    )
+    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
 
     # Relación con Asignación_Técnica: qué técnica se aplicó y en qué proyecto (RF-13).
     asignacion = models.ForeignKey(
@@ -192,7 +217,7 @@ class AplicacionTecnica(models.Model):
         verbose_name="Asignación",
     )
 
-    # Relación 'Registrada_Por' con Usuario
+    # Relación 'Registrada_Por' con Usuario: el responsable que aplicó la técnica.
     registrada_por = models.ForeignKey(
         Usuario,
         on_delete=models.CASCADE,
@@ -200,7 +225,10 @@ class AplicacionTecnica(models.Model):
         verbose_name="Registrada por",
     )
 
-    
+    class Meta:
+        verbose_name = "Aplicación de técnica"
+        verbose_name_plural = "Aplicaciones de técnicas"
+        ordering = ["-fecha", "-id_aplicacion"]
 
     def __str__(self):
         return f"Aplicación {self.id_aplicacion} ({self.resultado})"
@@ -281,6 +309,12 @@ class Corte(models.Model):
         Proyecto, on_delete=models.CASCADE, related_name="cortes", verbose_name="Proyecto"
     )
     fecha = models.DateField(verbose_name="Fecha de corte")
+    # RF-14: PRs fusionados del periodo acumulados hasta este corte. Son las aplicaciones
+    # esperadas de las técnicas con frecuencia «Por PR» (se capturan a mano, como las
+    # mediciones: la conexión con GitHub está fuera del alcance).
+    prs_fusionados = models.PositiveIntegerField(
+        default=0, verbose_name="PRs fusionados al corte"
+    )
 
     class Meta:
         ordering = ["fecha"]

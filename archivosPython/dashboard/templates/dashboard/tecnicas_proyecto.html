@@ -5,16 +5,26 @@
 {% block contenido %}
 {% include "dashboard/_pestanas_proyecto.html" with activa="tecnicas" %}
 
-{# RF-12, según el mockup «Técnicas del proyecto» #}
+{# RF-12 y RF-14, según el mockup «Técnicas del proyecto» #}
 <div class="kpis">
     <div class="kpi"><div class="k">Técnicas asignadas</div><div class="v">{{ asignaciones|length }}</div><div class="h">de {{ total_catalogo }} en el catálogo</div></div>
-    <div class="kpi"><div class="k">Aplicaciones registradas</div><div class="v">{{ aplicaciones }}</div><div class="h">con su enlace de evidencia</div></div>
+    <div class="kpi"><div class="k">Aplicaciones registradas</div><div class="v">{{ cumplimiento.registradas }} / {{ cumplimiento.esperadas }}</div><div class="h">esperadas en el periodo{% if ultimo %} (hasta el corte {{ cortes|length }}){% endif %}</div></div>
+    <div class="kpi">
+        <div class="k">{% if cumplimiento.porcentaje is not None %}<span class="dot {% if cumplimiento.clase == 'good' %}g{% elif cumplimiento.clase == 'neutral' %}y{% else %}r{% endif %}"></span>{% endif %}Cumplimiento de técnicas</div>
+        <div class="v">{% if cumplimiento.porcentaje is not None %}{{ cumplimiento.porcentaje|floatformat:0 }} %{% else %}—{% endif %}</div>
+        <div class="h">
+            {% if cumplimiento.porcentaje is None %}Sin aplicaciones esperadas todavía
+            {% elif cumplimiento.clase == 'good' %}80 % o más: verde
+            {% elif cumplimiento.clase == 'neutral' %}Entre 60 y 79 %: amarillo
+            {% else %}Menos de 60 %: rojo{% endif %}
+        </div>
+    </div>
 </div>
 
 {# Cada asignación tiene responsable y frecuencia; novalidate para validar en el servidor (RNF-04) #}
-<form class="card" method="post" novalidate style="margin-bottom: 18px;">
+<form class="card" method="post" action="{% url 'tecnicas_proyecto' proyecto.pk %}" novalidate style="margin-bottom: 18px;">
     {% csrf_token %}
-    <div class="card-h"><h2>Asignar técnica</h2><span class="help">Solo aparecen las técnicas que el proyecto todavía no tiene</span></div>
+    <div class="card-h"><h2>Asignar técnica</h2><span class="help">Cada técnica se asigna una vez por proyecto</span></div>
     <div class="card-b">
         {% if formulario.non_field_errors %}<div class="alert bad">{{ formulario.non_field_errors }}</div>{% endif %}
         {% if formulario.fields.tecnica.queryset.exists %}
@@ -44,26 +54,57 @@
 <div class="table-wrap">
     <table class="sheet">
         <thead>
-            <tr><th class="rn"></th><th>Técnica</th><th>Responsable</th><th>Frecuencia</th><th>Referencia a norma</th><th class="num">Aplicaciones registradas</th></tr>
+            <tr><th class="rn"></th><th>Técnica</th><th>Responsable</th><th>Frecuencia</th><th class="num">Esperadas</th><th class="num">Registradas</th><th class="num">Cumplimiento</th><th></th></tr>
         </thead>
         <tbody>
-            {% for asignacion in asignaciones %}
+            {% for fila in cumplimiento.tecnicas %}
                 <tr>
                     <td class="rn">{{ forloop.counter }}</td>
-                    <td><b>{{ asignacion.tecnica.nombre }}</b></td>
-                    <td>{{ asignacion.usuario }}</td>
-                    <td>{{ asignacion.frecuencia }}</td>
-                    <td>{% if asignacion.tecnica.referencia_norma %}{{ asignacion.tecnica.referencia_norma }}{% else %}<span class="muted">Sin referencia</span>{% endif %}</td>
-                    <td class="num">{{ asignacion.registradas }}</td>
+                    <td><b>{{ fila.asignacion.tecnica.nombre }}</b>{% if fila.asignacion.tecnica.referencia_norma %}<div class="help">{{ fila.asignacion.tecnica.referencia_norma }}</div>{% endif %}</td>
+                    <td>{{ fila.asignacion.usuario }}</td>
+                    <td>{{ fila.asignacion.frecuencia }}</td>
+                    <td class="num">{{ fila.esperadas }}</td>
+                    <td class="num">{{ fila.registradas }}</td>
+                    <td class="num {{ fila.clase }}">{% if fila.porcentaje is not None %}{{ fila.porcentaje|floatformat:0 }} %{% else %}<span class="muted" title="Todavía no hay aplicaciones esperadas">—</span>{% endif %}</td>
+                    <td><a class="btn sm" href="{% url 'registrar_aplicacion' proyecto.pk %}?asignacion={{ fila.asignacion.pk }}">Registrar aplicación</a></td>
                 </tr>
             {% empty %}
-                <tr><td class="rn"></td><td colspan="5" class="muted">Este proyecto todavía no tiene técnicas asignadas.</td></tr>
+                <tr><td class="rn"></td><td colspan="7" class="muted">Este proyecto todavía no tiene técnicas asignadas.</td></tr>
             {% endfor %}
+            {% if cumplimiento.tecnicas %}
+                <tr class="total">
+                    <td class="rn"></td><td>Total del proyecto</td><td></td><td></td>
+                    <td class="num">{{ cumplimiento.esperadas }}</td>
+                    <td class="num">{{ cumplimiento.registradas }}</td>
+                    <td class="num">{% if cumplimiento.porcentaje is not None %}{{ cumplimiento.porcentaje|floatformat:0 }} %{% else %}—{% endif %}</td>
+                    <td></td>
+                </tr>
+            {% endif %}
         </tbody>
     </table>
 </div>
-<p class="help" style="margin: 10px 0 0;">El registro de aplicaciones con evidencia y el porcentaje de cumplimiento llegan con RF-13 y RF-14.</p>
+<p class="help" style="margin: 10px 0 18px;">
+    Cumplimiento = aplicaciones registradas / aplicaciones esperadas. Esperadas: por corte = cortes del proyecto ({{ cortes|length }}); por PR = PRs fusionados al último corte ({% if ultimo %}{{ ultimo.prs_fusionados }}{% else %}0{% endif %}); única = 1.
+    Si una técnica tiene más aplicaciones de las esperadas, cuenta como 100 %.
+</p>
+
+{% if mostrar_prs %}
+{# RF-14: los PRs fusionados se capturan a mano por corte (la conexión con GitHub está fuera del alcance) #}
+<details class="card plegable" id="prs-fusionados" {% if abrir_prs %}open{% endif %}>
+    <summary class="card-h"><h2>PRs fusionados por corte</h2><span class="help">Aplicaciones esperadas de las técnicas «Por PR»</span></summary>
+    <form class="card-b" method="post" action="{% url 'guardar_prs_fusionados' proyecto.pk %}" novalidate>
+        {% csrf_token %}
+        <div class="form-grid" style="grid-template-columns: minmax(0, 260px) minmax(0, 200px) auto; align-items: end; justify-content: start;">
+            {% include "dashboard/_campo.html" with campo=form_prs.corte %}
+            {% include "dashboard/_campo.html" with campo=form_prs.prs_fusionados %}
+            <button class="btn primary" type="submit">Guardar</button>
+        </div>
+        <p class="help" style="margin: 12px 0 0;">Son acumulados: los PRs fusionados desde el inicio del periodo hasta la fecha del corte.
+            {% for corte in cortes %}Corte {{ forloop.counter }}: {{ corte.prs_fusionados }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+    </form>
+</details>
+{% endif %}
 {% endblock %}
 
-{% block estado %}{% if formulario.errors %}{{ formulario.errors|length }} error{{ formulario.errors|length|pluralize:"es" }} en el formulario{% else %}Listo{% endif %}{% endblock %}
-{% block estado_derecha %}{{ asignaciones|length }} técnica{{ asignaciones|length|pluralize }} asignada{{ asignaciones|length|pluralize }}{% endblock %}
+{% block estado %}{% if formulario.errors %}{{ formulario.errors|length }} error{{ formulario.errors|length|pluralize:"es" }} en el formulario{% elif form_prs.errors %}{{ form_prs.errors|length }} error{{ form_prs.errors|length|pluralize:"es" }} en los PRs fusionados{% else %}Listo{% endif %}{% endblock %}
+{% block estado_derecha %}{% if cumplimiento.porcentaje is not None %}Cumplimiento de técnicas: {{ cumplimiento.porcentaje|floatformat:0 }} %{% else %}{{ asignaciones|length }} técnica{{ asignaciones|length|pluralize }} asignada{{ asignaciones|length|pluralize }}{% endif %}{% endblock %}
