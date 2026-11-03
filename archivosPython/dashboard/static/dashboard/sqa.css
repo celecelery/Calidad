@@ -187,3 +187,8 @@ textarea.form-control { min-height: 88px; resize: vertical; }
 .side .crece { flex: 1; }
 .sheet td.nw, .sheet td.num { white-space: nowrap; }
 .split table.sheet { min-width: 0; }
+details.plegable > summary { cursor: pointer; list-style: none; }
+details.plegable > summary::-webkit-details-marker { display: none; }
+details.plegable > summary h2::before { content: "▸ "; color: var(--verde); }
+details.plegable[open] > summary h2::before { content: "▾ "; }
+details.plegable:not([open]) > summary { border-bottom: none; }

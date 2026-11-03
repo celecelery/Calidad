@@ -5,12 +5,15 @@ from django.views.decorators.http import require_POST
 from . import plotly_app  # noqa: F401  (registra la aplicación Dash)
 from .forms import (
     AsignarMetricaForm,
+    CorteForm,
     FiltroProyectosForm,
+    MedicionForm,
     MetricaForm,
     PeriodoForm,
     ProyectoForm,
+    etiquetas_de_cortes,
 )
-from .models import Metrica, Proyecto
+from .models import Metrica, MetricaProyecto, Proyecto
 
 
 def periodo_view(request):
@@ -109,23 +112,132 @@ def metricas_view(request, pk=None):
     )
 
 
-def metricas_proyecto(request, pk):
-    """RF-07: métricas asignadas a un proyecto y formulario para asignar otra."""
-    proyecto = get_object_or_404(Proyecto.objects.select_related("periodo", "lider"), pk=pk)
-    datos = request.POST if request.method == "POST" else None
-    formulario = AsignarMetricaForm(datos, proyecto=proyecto)
+def _proyecto(pk):
+    return get_object_or_404(Proyecto.objects.select_related("periodo", "lider"), pk=pk)
 
-    if formulario.is_valid():
-        metrica = formulario.cleaned_data["metrica"]
-        proyecto.metricas.add(metrica)
-        messages.success(request, f"Métrica «{metrica}» asignada a «{proyecto.nombre}».")
-        return redirect("metricas_proyecto", pk=proyecto.pk)
 
+def _pagina_mediciones(request, proyecto, form_medicion=None, form_corte=None, form_asignar=None):
+    """Pestaña Mediciones (mockup «Captura de mediciones»): captura, tabla por corte y métricas.
+
+    Cada vista que recibe un POST le pasa su formulario con errores; los demás van vacíos.
+    """
+    cortes = list(proyecto.cortes.all())
+    metricas = list(proyecto.metricas.all())
+    ultimo = cortes[-1] if cortes else None
+    mediciones = {
+        (m.metrica_id, m.corte_id): m
+        for m in MetricaProyecto.objects.filter(proyecto=proyecto).select_related(
+            "metrica", "capturado_por"
+        )
+    }
+
+    if form_medicion is None:
+        # Como en el mockup: se propone el último corte y la primera métrica pendiente en él.
+        pendientes = [m for m in metricas if ultimo and (m.pk, ultimo.pk) not in mediciones]
+        form_medicion = MedicionForm(
+            proyecto=proyecto,
+            initial={"corte": ultimo, "metrica": (pendientes or metricas or [None])[0]},
+        )
+    # Celda resaltada en la tabla: la métrica y el corte elegidos en el formulario.
+    seleccion = (str(form_medicion["metrica"].value()), str(form_medicion["corte"].value()))
+
+    filas = []
+    for metrica in metricas:
+        celdas = []
+        for corte in cortes:
+            medicion = mediciones.get((metrica.pk, corte.pk))
+            celdas.append({
+                "medicion": medicion,
+                "cumple": metrica.cumple(medicion.valor) if medicion else None,
+                "seleccionada": seleccion == (str(metrica.pk), str(corte.pk)),
+            })
+        ultima = mediciones.get((metrica.pk, ultimo.pk)) if ultimo else None
+        filas.append({"metrica": metrica, "celdas": celdas, "ultima": ultima})
+
+    totales = []
+    for i, _corte in enumerate(cortes):
+        capturadas = [fila["celdas"][i] for fila in filas if fila["celdas"][i]["medicion"]]
+        totales.append({
+            "cumplidas": sum(1 for celda in capturadas if celda["cumple"]),
+            "capturadas": len(capturadas),
+        })
+
+    etiquetas = etiquetas_de_cortes(proyecto)
     return render(
         request,
         "dashboard/metricas_proyecto.html",
-        {"formulario": formulario, "proyecto": proyecto, "metricas": proyecto.metricas.all()},
+        {
+            "proyecto": proyecto,
+            "metricas": metricas,
+            "cortes": [{"corte": c, "numero": n} for n, c in enumerate(cortes, 1)],
+            "ultimo": {"corte": ultimo, "etiqueta": etiquetas.get(ultimo.pk)} if ultimo else None,
+            "filas": filas,
+            "totales": totales,
+            "pendientes_ultimo": sum(1 for fila in filas if ultimo and not fila["ultima"]),
+            "form_medicion": form_medicion,
+            "form_corte": form_corte or CorteForm(proyecto=proyecto),
+            "abrir_corte": form_corte is not None or not cortes,
+            "form_asignar": form_asignar or AsignarMetricaForm(proyecto=proyecto),
+            # Para que la línea fx y la unidad cambien al elegir otra métrica (ver plantilla).
+            "detalle_metricas": {
+                str(m.pk): {
+                    "fx": f"{m.clave or m.nombre} = {m.formula} · Meta {m.meta_texto}"
+                    + (f" · Fuente: {m.fuente}" if m.fuente else ""),
+                    "unidad": "%" if m.unidad == Metrica.Unidad.PORCENTAJE else "",
+                }
+                for m in metricas
+            },
+        },
     )
+
+
+def metricas_proyecto(request, pk):
+    """Pestaña Mediciones del proyecto. Por POST asigna una métrica del catálogo (RF-07)."""
+    proyecto = _proyecto(pk)
+    if request.method != "POST":
+        return _pagina_mediciones(request, proyecto)
+
+    formulario = AsignarMetricaForm(request.POST, proyecto=proyecto)
+    if not formulario.is_valid():
+        return _pagina_mediciones(request, proyecto, form_asignar=formulario)
+    metrica = formulario.cleaned_data["metrica"]
+    proyecto.metricas.add(metrica)
+    messages.success(request, f"Métrica «{metrica}» asignada a «{proyecto.nombre}».")
+    return redirect("metricas_proyecto", pk=proyecto.pk)
+
+
+@require_POST
+def capturar_medicion(request, pk):
+    """RF-08: guardar el valor de una métrica en un corte; si ya existía, se corrige."""
+    proyecto = _proyecto(pk)
+    formulario = MedicionForm(request.POST, proyecto=proyecto)
+    if not formulario.is_valid():
+        return _pagina_mediciones(request, proyecto, form_medicion=formulario)
+
+    datos = formulario.cleaned_data
+    _, creada = MetricaProyecto.objects.update_or_create(
+        proyecto=proyecto,
+        metrica=datos["metrica"],
+        corte=datos["corte"],
+        defaults={"valor": datos["valor"], "capturado_por": request.user},
+    )
+    etiqueta = etiquetas_de_cortes(proyecto)[datos["corte"].pk]
+    accion = "guardada" if creada else "actualizada"
+    messages.success(request, f"Medición de «{datos['metrica']}» en {etiqueta} {accion}.")
+    return redirect("metricas_proyecto", pk=proyecto.pk)
+
+
+@require_POST
+def agregar_corte(request, pk):
+    """RF-08: agregar un corte (fecha) al proyecto para capturar sus mediciones."""
+    proyecto = _proyecto(pk)
+    formulario = CorteForm(request.POST, proyecto=proyecto)
+    if not formulario.is_valid():
+        return _pagina_mediciones(request, proyecto, form_corte=formulario)
+
+    corte = formulario.save()
+    messages.success(request, f"{etiquetas_de_cortes(proyecto)[corte.pk]} agregado.")
+    return redirect("metricas_proyecto", pk=proyecto.pk)
 
 
 @require_POST
