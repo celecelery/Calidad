@@ -57,7 +57,7 @@
     </div>
 
     {% if reporte.sin_medicion %}
-        <div class="alert warn">Faltan {{ reporte.sin_medicion }} medicion{{ reporte.sin_medicion|pluralize:"es" }} en este corte; cuentan como metas no cumplidas. <a href="{% url 'metricas_proyecto' proyecto.pk %}">Capturar mediciones</a></div>
+        <div class="alert warn">{% if reporte.sin_medicion == 1 %}Falta 1 medición en este corte; cuenta como meta no cumplida.{% else %}Faltan {{ reporte.sin_medicion }} mediciones en este corte; cuentan como metas no cumplidas.{% endif %} <a href="{% url 'metricas_proyecto' proyecto.pk %}">Capturar mediciones</a></div>
     {% endif %}
 
     <div class="page-head" style="margin-bottom: 10px;"><h2>Métricas contra meta</h2></div>
