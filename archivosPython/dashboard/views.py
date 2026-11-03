@@ -25,8 +25,11 @@ from .salud import reporte_de_salud
 
 
 def obtener_perfil_usuario(request):
-    usuario = Usuario.objects.get(user=request.user)
-    return usuario.get_perfil()
+    if not request.user.is_authenticated:
+        return None
+    usuario = Usuario.objects.filter(user=request.user).first()
+    return usuario.perfil if usuario else None
+
 
 def periodo_view(request):
     """RF-01: formulario para registrar un periodo."""
@@ -40,6 +43,7 @@ def periodo_view(request):
         formulario = PeriodoForm()
 
     return render(request, "dashboard/formulario_periodo.html", {"formulario": formulario})
+
 
 def proyecto_view(request):
     """RF-02: formulario para registrar un proyecto."""
@@ -85,8 +89,9 @@ def lista_proyectos(request):
 def editar_proyecto(request, pk):
     """RF-03: editar los datos de un proyecto; solo se modifica ese proyecto."""
     proyecto = get_object_or_404(Proyecto.objects.select_related("periodo", "lider"), pk=pk)
-    if not obtener_perfil_usuario(request) == 'administrador':
-        redirect("lista_proyectos")
+    if obtener_perfil_usuario(request) != "administrador":
+        messages.error(request, "Solo un administrador puede editar proyectos.")
+        return redirect("lista_proyectos")
     if request.method == "POST":
         formulario = ProyectoForm(request.POST, instance=proyecto)
         if formulario.is_valid():
@@ -291,8 +296,9 @@ def agregar_corte(request, pk):
 @require_POST
 def quitar_metrica(request, pk, metrica_pk):
     """RF-07: quitar una métrica de un proyecto; no la borra del catálogo ni de otros proyectos."""
-    if not obtener_perfil_usuario(request) == 'administrador':
-        redirect("metricas_view")
+    if obtener_perfil_usuario(request) != "administrador":
+        messages.error(request, "Solo un administrador puede quitar métricas.")
+        return redirect("metricas_proyecto", pk=pk)
     proyecto = get_object_or_404(Proyecto, pk=pk)
     metrica = get_object_or_404(proyecto.metricas, pk=metrica_pk)
     proyecto.metricas.remove(metrica)
@@ -343,8 +349,9 @@ def tecnica_nueva(request):
 def editar_tecnica(request, pk):
     """RF-11: editar la descripción o la referencia de una técnica del catálogo."""
     tecnica = get_object_or_404(TecnicaSQA, pk=pk)
-    if not obtener_perfil_usuario(request) == 'administrador':
-        redirect("lista_tecnicas")
+    if obtener_perfil_usuario(request) != "administrador":
+        messages.error(request, "Solo un administrador puede editar técnicas.")
+        return redirect("lista_tecnicas")
     if request.method == "POST":
         formulario = TecnicaSQAForm(request.POST, instance=tecnica)
         if formulario.is_valid():

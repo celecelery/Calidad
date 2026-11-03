@@ -17,6 +17,10 @@ class ArchivarBase(TestCase):
         cls.usuario = get_user_model().objects.create_user(
             username="angel", password="clave-segura-123"
         )
+        # Perfil de administrador ligado al usuario que inicia sesión en las pruebas.
+        cls.admin = Usuario.objects.create(
+            nombre="Admin de pruebas", perfil="administrador", user=cls.usuario
+        )
         cls.lider = Usuario.objects.create(nombre="Angel Mazón", perfil="Administrador")
         cls.periodo = Periodo.objects.create(
             nombre="Ago-Dic 2026", fecha_inicio=date(2026, 8, 10), fecha_fin=date(2026, 12, 15)

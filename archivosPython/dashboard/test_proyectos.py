@@ -15,6 +15,10 @@ class ProyectosBaseTest(TestCase):
         cls.usuario = get_user_model().objects.create_user(
             username="angel", password="clave-segura-123"
         )
+        # Perfil de administrador ligado al usuario que inicia sesión en las pruebas.
+        cls.admin = Usuario.objects.create(
+            nombre="Admin de pruebas", perfil="administrador", user=cls.usuario
+        )
         cls.ana = Usuario.objects.create(nombre="Ana", perfil="Miembro")
         cls.luis = Usuario.objects.create(nombre="Luis", perfil="Miembro")
         cls.ago_dic = Periodo.objects.create(
@@ -160,6 +164,39 @@ class EditarProyectoTests(ProyectosBaseTest):
         self.assertEqual(respuesta.status_code, 404)
 
 
+class PermisosEditarProyectoTests(ProyectosBaseTest):
+    """Solo el perfil administrador puede editar un proyecto."""
+
+    def iniciar_sesion(self, perfil=None):
+        cuenta = get_user_model().objects.create_user(
+            username="otra-cuenta", password="clave-segura-123"
+        )
+        if perfil:
+            Usuario.objects.create(nombre="Otra cuenta", perfil=perfil, user=cuenta)
+        self.client.force_login(cuenta)
+
+    def intentar_editar(self):
+        datos = {
+            "nombre": "Nombre no autorizado",
+            "descripcion": "Descripción de prueba",
+            "lider": self.ana.pk,
+            "integrantes": 4,
+            "periodo": self.ago_dic.pk,
+        }
+        self.client.post(reverse("editar_proyecto", args=[self.activo_ago.pk]), datos)
+        self.activo_ago.refresh_from_db()
+
+    def test_miembro_no_puede_editar(self):
+        self.iniciar_sesion(perfil="miembro")
+        self.intentar_editar()
+        self.assertEqual(self.activo_ago.nombre, "Dashboard SQA")
+
+    def test_cuenta_sin_perfil_no_puede_editar(self):
+        self.iniciar_sesion()
+        self.intentar_editar()
+        self.assertEqual(self.activo_ago.nombre, "Dashboard SQA")
+
+
 class MenuNavegacionTests(ProyectosBaseTest):
     """El menú aparece en todas las páginas con ligas a cada pantalla y botón de cerrar sesión."""
 
@@ -218,3 +255,4 @@ class GraficaInicioTests(ProyectosBaseTest):
         figura = actualizar_grafica("todos")
         self.assertEqual(len(figura.data), 0)
         self.assertEqual(figura.layout.annotations[0].text, "Aún no hay proyectos registrados.")
+ 
