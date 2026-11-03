@@ -192,3 +192,8 @@ details.plegable > summary::-webkit-details-marker { display: none; }
 details.plegable > summary h2::before { content: "▸ "; color: var(--verde); }
 details.plegable[open] > summary h2::before { content: "▾ "; }
 details.plegable:not([open]) > summary { border-bottom: none; }
+
+/* RF-15: texto del semáforo general en el reporte de salud */
+.semaforo-r { color: var(--rojo); }
+.semaforo-y { color: var(--neutro-tx); }
+.semaforo-g { color: var(--bueno-tx); }

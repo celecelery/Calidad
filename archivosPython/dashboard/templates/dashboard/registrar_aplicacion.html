@@ -1,0 +1,98 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Registrar aplicación — {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+{% include "dashboard/_pestanas_proyecto.html" with activa="tecnicas" %}
+
+{# RF-13, según el mockup «Registrar aplicación de técnica». novalidate: valida el servidor (RNF-04) #}
+<div class="split">
+    <form class="card" method="post" action="{% url 'registrar_aplicacion' proyecto.pk %}" novalidate>
+        {% csrf_token %}
+        <div class="card-h"><h2>Nueva aplicación</h2><span class="help">Los campos con <span class="req">*</span> son obligatorios</span></div>
+        <div class="card-b">
+            {% if falta_evidencia %}
+                <div class="alert bad" role="alert">No se guardó: falta el enlace de evidencia.</div>
+            {% elif formulario.non_field_errors %}
+                <div class="alert bad">{{ formulario.non_field_errors }}</div>
+            {% endif %}
+            {% if not formulario.fields.asignacion.queryset.exists %}
+                <div class="alert warn">El proyecto no tiene técnicas asignadas. <a href="{% url 'tecnicas_proyecto' proyecto.pk %}">Asigna una</a> para poder registrar su aplicación.</div>
+            {% endif %}
+            <div class="form-grid">
+                <div class="field full{% if formulario.asignacion.errors %} con-error{% endif %}">
+                    <label for="{{ formulario.asignacion.id_for_label }}">{{ formulario.asignacion.label }} <span class="req">*</span></label>
+                    {{ formulario.asignacion }}
+                    {% for error in formulario.asignacion.errors %}<span class="err-msg">{{ error }}</span>{% endfor %}
+                </div>
+                {% include "dashboard/_campo.html" with campo=formulario.fecha %}
+                {% include "dashboard/_campo.html" with campo=formulario.registrada_por %}
+                <fieldset class="field full" style="border: 0; margin: 0; padding: 0; min-width: 0;">
+                    <legend class="lbl" style="margin-bottom: 6px;">{{ formulario.resultado.label }} <span class="req">*</span></legend>
+                    <div class="radios" style="gap: 4px 20px;">
+                        {% for opcion in formulario.resultado %}
+                            <label class="radio" for="{{ opcion.id_for_label }}">{{ opcion.tag }}{{ opcion.choice_label }}</label>
+                        {% endfor %}
+                    </div>
+                    {% for error in formulario.resultado.errors %}<span class="err-msg">{{ error }}</span>{% endfor %}
+                </fieldset>
+                <div class="field full{% if formulario.evidencia.errors %} con-error{% endif %}">
+                    <label for="{{ formulario.evidencia.id_for_label }}">{{ formulario.evidencia.label }} <span class="req">*</span></label>
+                    {{ formulario.evidencia }}
+                    {% for error in formulario.evidencia.errors %}<span class="err-msg">{{ error }}</span>{% endfor %}
+                </div>
+                <div class="field full">
+                    <label for="{{ formulario.observaciones.id_for_label }}">{{ formulario.observaciones.label }}</label>
+                    {{ formulario.observaciones }}
+                </div>
+            </div>
+            <div class="form-foot">
+                <a class="btn" href="{% url 'tecnicas_proyecto' proyecto.pk %}">Cancelar</a>
+                <button class="btn primary" type="submit">Guardar aplicación</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="stack">
+        {% if detalle %}
+            {% with fila=detalle.fila %}
+            <div class="card">
+                <div class="card-h">
+                    <h2>{{ fila.asignacion.tecnica.nombre }}</h2>
+                    {% if fila.porcentaje is not None %}<span class="pill {% if fila.clase == 'good' %}good{% elif fila.clase == 'neutral' %}neutral{% else %}bad{% endif %}">{{ fila.registradas }} de {{ fila.esperadas }} · {{ fila.porcentaje|floatformat:0 }} %</span>{% endif %}
+                </div>
+                <div class="card-b">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr><td class="muted">Responsable</td><td>{{ fila.asignacion.usuario }}</td></tr>
+                        <tr><td class="muted">Frecuencia</td><td>{{ fila.asignacion.frecuencia }}</td></tr>
+                        <tr><td class="muted">Referencia</td><td>{{ fila.asignacion.tecnica.referencia_norma|default:"Sin referencia" }}</td></tr>
+                    </table>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-h"><h2>Aplicaciones registradas</h2></div>
+                <div class="card-b">
+                    {% for item in detalle.aplicaciones %}
+                        <div style="display: flex; justify-content: space-between; gap: 10px; padding: 8px 0;{% if not forloop.last %} border-bottom: 1px solid var(--linea);{% endif %}">
+                            <div>
+                                <b>{{ item.aplicacion.fecha|date:"d/m/Y" }} · {{ item.corte }}</b><br>
+                                <a href="{{ item.aplicacion.evidencia }}" target="_blank" rel="noopener noreferrer">Ver evidencia</a>
+                                <span class="help">· {{ item.aplicacion.registrada_por }}</span>
+                            </div>
+                            <span class="pill {% if item.aplicacion.resultado == 'Favorable' %}good{% elif item.aplicacion.resultado == 'Mixto' %}neutral{% else %}bad{% endif %}" style="align-self: flex-start;">{{ item.aplicacion.resultado }}</span>
+                        </div>
+                    {% empty %}
+                        <p class="muted" style="margin: 0;">Todavía no hay aplicaciones de esta técnica.</p>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endwith %}
+        {% else %}
+            <div class="card"><div class="card-b"><p class="muted" style="margin: 0;">Elige una técnica desde la pestaña <a href="{% url 'tecnicas_proyecto' proyecto.pk %}">Técnicas SQA</a> para ver su avance y sus aplicaciones.</p></div></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block estado %}Modo edición{% endblock %}
+{% block estado_derecha %}{% if formulario.errors %}{{ formulario.errors|length }} error{{ formulario.errors|length|pluralize:"es" }} en el formulario{% endif %}{% endblock %}
