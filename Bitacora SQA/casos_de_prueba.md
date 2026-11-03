@@ -10,6 +10,7 @@ Tarea 10.2. Casos escritos a partir del **criterio de aceptación** de cada requ
 - **Manual:** la hace una persona en el navegador.
 
 **Columna «Automatizada en»:** archivo y nombre de la prueba de pytest que cubre el caso (`archivo › prueba`, dentro de `archivosPython/dashboard/`). «Pendiente de implementar» significa que el requisito todavía no está en `main`.
+**Columna «Automatizada en»:** archivo y nombre de la prueba de pytest que cubre el caso (`archivo › prueba`, dentro de `archivosPython/dashboard/`). «Por automatizar (10.3)» significa que la prueba se escribe en la tarea 10.3. «Pendiente de implementar» significa que el requisito todavía no está en `main`.
 
 **Datos comunes:** periodo *Ago–Dic 2026* (10/08/2026 – 15/12/2026), proyecto *Dashboard SQA* con las 6 métricas base (M-01 a M-06) y corte del 20/10/2026, salvo que el caso diga otra cosa.
 
