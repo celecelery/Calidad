@@ -43,8 +43,8 @@
                 <div class="nav-label">Catálogos</div>
                 <a href="{% url 'lista_metricas' %}" {% if actual == 'lista_metricas' or actual == 'metrica_nueva' or actual == 'editar_metrica' %}class="on" aria-current="page"{% endif %}>
                     <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg>Métricas</a>
-                <span class="off" title="Próximamente (RF-11)">
-                    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h10M10 12h10M10 18h10M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"></path></svg>Técnicas SQA</span>
+                <a href="{% url 'lista_tecnicas' %}" {% if actual == 'lista_tecnicas' or actual == 'tecnica_nueva' or actual == 'editar_tecnica' %}class="on" aria-current="page"{% endif %}>
+                    <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h10M10 12h10M10 18h10M3 6l1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"></path></svg>Técnicas SQA</a>
 
                 <div class="nav-label">Administración</div>
                 <a href="{% url 'periodo_nuevo' %}" {% if actual == 'periodo_nuevo' %}class="on" aria-current="page"{% endif %}>

@@ -1,6 +1,14 @@
 from django import forms
 
-from .models import Corte, Metrica, Periodo, Proyecto
+from .models import (
+    AsignacionTecnica,
+    Corte,
+    Metrica,
+    Periodo,
+    Proyecto,
+    TecnicaSQA,
+    Usuario,
+)
 
 MENSAJE_OBLIGATORIO = "Este campo es obligatorio."
 
@@ -323,3 +331,97 @@ class MedicionForm(forms.Form):
             elif valor != valor.to_integral_value():
                 self.add_error("valor", "Un conteo es un número entero.")
         return datos
+
+
+class TecnicaSQAForm(forms.ModelForm):
+    """RF-11: alta y edición de una técnica del catálogo. Se valida en el servidor (RNF-04)."""
+
+    class Meta:
+        model = TecnicaSQA
+        fields = ["nombre", "descripcion", "referencia_norma"]
+        labels = {
+            "nombre": "Nombre",
+            "descripcion": "Descripción",
+            "referencia_norma": "Referencia a norma (opcional)",
+        }
+        help_texts = {
+            "referencia_norma": "Déjalo vacío si la técnica no viene de una norma.",
+        }
+        widgets = {
+            "nombre": forms.TextInput(attrs={"class": "input"}),
+            "descripcion": forms.Textarea(attrs={"class": "input", "rows": 3}),
+            "referencia_norma": forms.TextInput(
+                attrs={
+                    "class": "input",
+                    "placeholder": "IEEE 1028, ISO/IEC/IEEE 29119, regla del equipo…",
+                }
+            ),
+        }
+        error_messages = {
+            "nombre": {"required": MENSAJE_OBLIGATORIO},
+            "descripcion": {"required": MENSAJE_OBLIGATORIO},
+        }
+
+    # Los CharField de Django ya quitan los espacios sobrantes, así que un nombre o una
+    # descripción hechos solo de espacios llegan vacíos y fallan como obligatorios.
+    def clean_nombre(self):
+        nombre = self.cleaned_data["nombre"]
+        repetidas = TecnicaSQA.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk:
+            repetidas = repetidas.exclude(pk=self.instance.pk)
+        if repetidas.exists():
+            raise forms.ValidationError("Ya existe una técnica con ese nombre en el catálogo.")
+        return nombre
+
+
+class AsignacionTecnicaForm(forms.ModelForm):
+    """RF-12: asignar una técnica a un proyecto con responsable y frecuencia esperada.
+
+    El proyecto no es un campo del formulario: lo fija la vista con la URL. La lista de
+    técnicas solo ofrece las que el proyecto todavía no tiene asignadas.
+    """
+
+    class Meta:
+        model = AsignacionTecnica
+        fields = ["tecnica", "usuario", "frecuencia"]
+        labels = {
+            "tecnica": "Técnica",
+            "usuario": "Responsable",
+            "frecuencia": "Frecuencia esperada",
+        }
+        widgets = {
+            "tecnica": forms.Select(attrs={"class": "input"}),
+            "usuario": forms.Select(attrs={"class": "input"}),
+            "frecuencia": forms.RadioSelect,
+        }
+        error_messages = {
+            "tecnica": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona una técnica del catálogo que el proyecto no tenga "
+                "asignada.",
+            },
+            "usuario": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona un responsable de la lista.",
+            },
+            "frecuencia": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona una frecuencia: por corte, por PR o única.",
+            },
+        }
+
+    def __init__(self, *args, proyecto, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proyecto = proyecto
+        self.instance.proyecto = proyecto
+        asignadas = AsignacionTecnica.objects.filter(proyecto=proyecto)
+        if self.instance.pk:
+            asignadas = asignadas.exclude(pk=self.instance.pk)
+        self.fields["tecnica"].queryset = TecnicaSQA.objects.exclude(
+            asignaciones__in=asignadas
+        ).order_by("nombre")
+        self.fields["tecnica"].empty_label = "Selecciona una técnica"
+        self.fields["usuario"].queryset = Usuario.objects.order_by("nombre")
+        self.fields["usuario"].empty_label = "Selecciona un responsable"
+        # Sin la opción vacía "---------" que Django agrega a los radios.
+        self.fields["frecuencia"].choices = AsignacionTecnica.Frecuencia.choices

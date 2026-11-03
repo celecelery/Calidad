@@ -1,9 +1,11 @@
 from django.contrib import messages
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from . import plotly_app  # noqa: F401  (registra la aplicación Dash)
 from .forms import (
+    AsignacionTecnicaForm,
     AsignarMetricaForm,
     CorteForm,
     FiltroProyectosForm,
@@ -11,9 +13,10 @@ from .forms import (
     MetricaForm,
     PeriodoForm,
     ProyectoForm,
+    TecnicaSQAForm,
     etiquetas_de_cortes,
 )
-from .models import Metrica, MetricaProyecto, Proyecto
+from .models import Metrica, MetricaProyecto, Proyecto, TecnicaSQA
 
 
 def periodo_view(request):
@@ -248,6 +251,96 @@ def quitar_metrica(request, pk, metrica_pk):
     proyecto.metricas.remove(metrica)
     messages.success(request, f"Métrica «{metrica}» quitada de «{proyecto.nombre}».")
     return redirect("metricas_proyecto", pk=proyecto.pk)
+
+
+def _catalogo_tecnicas(request, formulario, tecnica=None):
+    """RF-11: pantalla del catálogo con el panel lateral para agregar o editar una técnica."""
+    busqueda = request.GET.get("q", "").strip()
+    tecnicas = TecnicaSQA.objects.annotate(en_uso=Count("asignaciones")).order_by("nombre")
+    if busqueda:
+        tecnicas = tecnicas.filter(
+            Q(nombre__icontains=busqueda) | Q(descripcion__icontains=busqueda)
+        )
+    return render(
+        request,
+        "dashboard/lista_tecnicas.html",
+        {
+            "tecnicas": tecnicas,
+            "busqueda": busqueda,
+            "formulario": formulario,
+            "tecnica_editada": tecnica,
+            "total": TecnicaSQA.objects.count(),
+            "con_referencia": TecnicaSQA.objects.exclude(referencia_norma="").count(),
+        },
+    )
+
+
+def lista_tecnicas(request):
+    """RF-11: catálogo de técnicas SQA."""
+    return _catalogo_tecnicas(request, TecnicaSQAForm())
+
+
+def tecnica_nueva(request):
+    """RF-11: agregar una técnica al catálogo."""
+    if request.method == "POST":
+        formulario = TecnicaSQAForm(request.POST)
+        if formulario.is_valid():
+            tecnica = formulario.save()
+            messages.success(request, f"Técnica «{tecnica.nombre}» agregada al catálogo.")
+            return redirect("lista_tecnicas")
+    else:
+        formulario = TecnicaSQAForm()
+    return _catalogo_tecnicas(request, formulario)
+
+
+def editar_tecnica(request, pk):
+    """RF-11: editar la descripción o la referencia de una técnica del catálogo."""
+    tecnica = get_object_or_404(TecnicaSQA, pk=pk)
+
+    if request.method == "POST":
+        formulario = TecnicaSQAForm(request.POST, instance=tecnica)
+        if formulario.is_valid():
+            tecnica = formulario.save()
+            messages.success(request, f"Técnica «{tecnica.nombre}» actualizada.")
+            return redirect("lista_tecnicas")
+    else:
+        formulario = TecnicaSQAForm(instance=tecnica)
+    return _catalogo_tecnicas(request, formulario, tecnica)
+
+
+def tecnicas_proyecto(request, pk):
+    """RF-12: técnicas asignadas a un proyecto y formulario para asignar una nueva."""
+    proyecto = get_object_or_404(Proyecto.objects.select_related("periodo", "lider"), pk=pk)
+
+    if request.method == "POST":
+        formulario = AsignacionTecnicaForm(request.POST, proyecto=proyecto)
+        if formulario.is_valid():
+            asignacion = formulario.save()
+            messages.success(
+                request,
+                f"Técnica «{asignacion.tecnica}» asignada a {asignacion.usuario} "
+                f"con frecuencia «{asignacion.frecuencia}».",
+            )
+            return redirect("tecnicas_proyecto", pk=proyecto.pk)
+    else:
+        formulario = AsignacionTecnicaForm(proyecto=proyecto)
+
+    asignaciones = (
+        proyecto.asignaciones_tecnicas.select_related("tecnica", "usuario")
+        .annotate(registradas=Count("aplicaciones"))
+        .order_by("tecnica__nombre")
+    )
+    return render(
+        request,
+        "dashboard/tecnicas_proyecto.html",
+        {
+            "proyecto": proyecto,
+            "asignaciones": asignaciones,
+            "formulario": formulario,
+            "total_catalogo": TecnicaSQA.objects.count(),
+            "aplicaciones": sum(a.registradas for a in asignaciones),
+        },
+    )
 
 
 def inicio(request):

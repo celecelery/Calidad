@@ -3,7 +3,13 @@ from django.db.models import Prefetch
 from .models import Periodo, Proyecto
 
 # Vistas cuyo `pk` es un proyecto: ese proyecto se resalta en la barra lateral.
-VISTAS_DE_PROYECTO = {"editar_proyecto", "metricas_proyecto", "capturar_medicion", "agregar_corte"}
+VISTAS_DE_PROYECTO = {
+    "editar_proyecto",
+    "metricas_proyecto",
+    "capturar_medicion",
+    "agregar_corte",
+    "tecnicas_proyecto",
+}
 
 
 def navegacion(request):

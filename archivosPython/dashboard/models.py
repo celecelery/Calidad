@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.functions import Lower
 
 # Create your models here.
 
@@ -108,30 +109,74 @@ class ReporteSalud(models.Model):
 
 class TecnicaSQA(models.Model):
     id_tecnica = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=150, default="", verbose_name="Nombre")
+    """RF-11: técnica del catálogo SQA (revisión, prueba, auditoría, etc.)."""
+
+    nombre = models.CharField(max_length=150, verbose_name="Nombre")
     descripcion = models.TextField(verbose_name="Descripción")
+    # Opcional: no todos los proyectos trabajan con una norma; puede ser una norma
+    # (IEEE 1028, ISO/IEC/IEEE 29119...) o una regla interna del equipo.
     referencia_norma = models.CharField(
-        max_length=150, verbose_name="Referencia de Norma"
+        max_length=150, blank=True, verbose_name="Referencia a norma"
     )
+
+    class Meta:
+        verbose_name = "Técnica SQA"
+        verbose_name_plural = "Técnicas SQA"
+        ordering = ["nombre"]
+        constraints = [
+            models.UniqueConstraint(Lower("nombre"), name="tecnica_nombre_unico"),
+        ]
 
     def __str__(self):
         return self.nombre or f"Técnica SQA {self.id_tecnica}"
 
 
 class AsignacionTecnica(models.Model):
+    """RF-12: técnica asignada a un proyecto, con responsable y frecuencia esperada."""
+
+    class Frecuencia(models.TextChoices):
+        POR_CORTE = "Por corte", "Por corte"
+        POR_PR = "Por PR", "Por PR"
+        UNICA = "Única", "Única"
+
     # Relación que involucra a Proyecto, TécnicasSQA y Usuario con el atributo 'Frecuencia'
-    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
-    tecnica = models.ForeignKey(TecnicaSQA, on_delete=models.CASCADE)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    frecuencia = models.CharField(max_length=50, verbose_name="Frecuencia")
+    proyecto = models.ForeignKey(
+        Proyecto,
+        on_delete=models.CASCADE,
+        related_name="asignaciones_tecnicas",
+        verbose_name="Proyecto",
+    )
+    tecnica = models.ForeignKey(
+        TecnicaSQA,
+        on_delete=models.CASCADE,
+        related_name="asignaciones",
+        verbose_name="Técnica",
+    )
+    # Responsable de aplicar la técnica en el proyecto.
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="tecnicas_asignadas",
+        verbose_name="Responsable",
+    )
+    frecuencia = models.CharField(
+        max_length=50, choices=Frecuencia.choices, verbose_name="Frecuencia"
+    )
 
     class Meta:
+        verbose_name = "Asignación de técnica"
+        verbose_name_plural = "Asignaciones de técnicas"
         constraints = [
+            # Una técnica se asigna una sola vez por proyecto (con un responsable).
+            # Así RF-14 no cuenta dos veces las aplicaciones esperadas de la misma técnica.
             models.UniqueConstraint(
-                fields=["proyecto", "tecnica", "usuario"],
+                fields=["proyecto", "tecnica"],
                 name="asignacion_unica",
             )
         ]
+
+    def __str__(self):
+        return f"{self.tecnica} en {self.proyecto} ({self.frecuencia})"
 
 class AplicacionTecnica(models.Model):
     id_aplicacion = models.AutoField(primary_key=True)

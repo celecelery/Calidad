@@ -19,4 +19,8 @@ urlpatterns = [
     path("metricas/", views.metricas_view, name="lista_metricas"),
     path("metricas/nueva/", views.metricas_view, name="metrica_nueva"),
     path("metricas/<int:pk>/editar/", views.metricas_view, name="editar_metrica"),
+    path("proyectos/<int:pk>/tecnicas/", views.tecnicas_proyecto, name="tecnicas_proyecto"),
+    path("tecnicas/", views.lista_tecnicas, name="lista_tecnicas"),
+    path("tecnicas/nueva/", views.tecnica_nueva, name="tecnica_nueva"),
+    path("tecnicas/<int:pk>/editar/", views.editar_tecnica, name="editar_tecnica"),
 ]
