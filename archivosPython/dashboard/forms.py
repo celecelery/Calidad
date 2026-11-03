@@ -1,6 +1,9 @@
 from django import forms
+from django.core.validators import URLValidator
+from django.utils import timezone
 
 from .models import (
+    AplicacionTecnica,
     AsignacionTecnica,
     Corte,
     Metrica,
@@ -425,3 +428,184 @@ class AsignacionTecnicaForm(forms.ModelForm):
         self.fields["usuario"].empty_label = "Selecciona un responsable"
         # Sin la opción vacía "---------" que Django agrega a los radios.
         self.fields["frecuencia"].choices = AsignacionTecnica.Frecuencia.choices
+
+
+MENSAJE_SIN_EVIDENCIA = (
+    "Agrega el enlace al acta, minuta, checklist, PR o documento que demuestra la aplicación."
+)
+
+
+class AplicacionTecnicaForm(forms.ModelForm):
+    """RF-13: registrar la aplicación de una técnica asignada al proyecto.
+
+    No se guarda sin enlace de evidencia (RN-12). La fecha debe caer dentro del periodo del
+    proyecto y no puede ser futura. Se valida en el servidor (RNF-04).
+    """
+
+    class Meta:
+        model = AplicacionTecnica
+        fields = [
+            "asignacion",
+            "fecha",
+            "registrada_por",
+            "resultado",
+            "evidencia",
+            "observaciones",
+        ]
+        labels = {
+            "asignacion": "Técnica asignada",
+            "fecha": "Fecha de aplicación",
+            "registrada_por": "Registrada por",
+            "resultado": "Resultado",
+            "evidencia": "Enlace de evidencia",
+            "observaciones": "Observaciones",
+        }
+        widgets = {
+            "asignacion": forms.Select(attrs={"class": "input"}),
+            "fecha": forms.DateInput(attrs={"class": "input", "type": "date"}, format="%Y-%m-%d"),
+            "registrada_por": forms.Select(attrs={"class": "input"}),
+            "resultado": forms.RadioSelect,
+            "evidencia": forms.URLInput(
+                attrs={"class": "input", "placeholder": "https://github.com/..."}
+            ),
+            "observaciones": forms.Textarea(attrs={"class": "input", "rows": 3}),
+        }
+        error_messages = {
+            "asignacion": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona una técnica asignada a este proyecto.",
+            },
+            "fecha": {"required": MENSAJE_OBLIGATORIO, "invalid": "Escribe una fecha válida."},
+            "registrada_por": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona un usuario de la lista.",
+            },
+            "resultado": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona un resultado: favorable, mixto o no ideal.",
+            },
+            "evidencia": {
+                "required": MENSAJE_SIN_EVIDENCIA,
+                "invalid": "Escribe un enlace válido que empiece con https:// o http://.",
+                "max_length": "El enlace es demasiado largo (máximo 500 caracteres).",
+            },
+        }
+
+    def __init__(self, *args, proyecto, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proyecto = proyecto
+        asignaciones = proyecto.asignaciones_tecnicas.select_related("tecnica").order_by(
+            "tecnica__nombre"
+        )
+        campo = self.fields["asignacion"]
+        campo.queryset = asignaciones
+        campo.empty_label = "Selecciona una técnica"
+        campo.label_from_instance = lambda a: f"{a.tecnica.nombre} — {a.frecuencia.lower()}"
+        self.fields["registrada_por"].queryset = Usuario.objects.order_by("nombre")
+        self.fields["registrada_por"].empty_label = "Selecciona un usuario"
+        # Sin la opción vacía "---------" que Django agrega a los radios.
+        self.fields["resultado"].choices = AplicacionTecnica.Resultado.choices
+        # Solo enlaces web: el URLField de Django también aceptaría ftp://.
+        self.fields["evidencia"].validators.append(
+            URLValidator(
+                schemes=["http", "https"],
+                message="Escribe un enlace válido que empiece con https:// o http://.",
+            )
+        )
+        if not self.is_bound:
+            self.initial.setdefault("fecha", timezone.localdate())
+            asignacion = self.initial.get("asignacion")
+            if isinstance(asignacion, AsignacionTecnica):
+                # Como en el mockup: se propone al responsable de la técnica.
+                self.initial.setdefault("registrada_por", asignacion.usuario)
+
+    def clean_fecha(self):
+        fecha = self.cleaned_data["fecha"]
+        periodo = self.proyecto.periodo
+        if not periodo.fecha_inicio <= fecha <= periodo.fecha_fin:
+            raise forms.ValidationError(
+                f"La fecha debe caer dentro del periodo {periodo.nombre} "
+                f"({periodo.fecha_inicio:%d/%m/%Y} – {periodo.fecha_fin:%d/%m/%Y})."
+            )
+        if fecha > timezone.localdate():
+            raise forms.ValidationError("La fecha de aplicación no puede ser futura.")
+        return fecha
+
+
+class PrsFusionadosForm(forms.Form):
+    """RF-14: PRs fusionados acumulados a un corte (aplicaciones esperadas «Por PR»)."""
+
+    corte = forms.ModelChoiceField(
+        queryset=Corte.objects.none(),
+        label="Corte",
+        empty_label=None,
+        widget=forms.Select(attrs={"class": "input"}),
+        error_messages={
+            "required": "Selecciona un corte.",
+            "invalid_choice": "Selecciona un corte de este proyecto.",
+        },
+    )
+    prs_fusionados = forms.IntegerField(
+        label="PRs fusionados al corte",
+        min_value=0,
+        widget=forms.NumberInput(attrs={"class": "input", "min": 0}),
+        error_messages={
+            "required": MENSAJE_OBLIGATORIO,
+            "invalid": "Escribe un número entero.",
+            "min_value": "No puede ser negativo.",
+        },
+    )
+
+    def __init__(self, *args, proyecto, **kwargs):
+        kwargs.setdefault("auto_id", "prs_%s")
+        super().__init__(*args, **kwargs)
+        etiquetas = etiquetas_de_cortes(proyecto)
+        self.fields["corte"].queryset = proyecto.cortes.all()
+        self.fields["corte"].label_from_instance = lambda corte: etiquetas[corte.pk]
+        if not self.is_bound:
+            ultimo = proyecto.cortes.last()
+            if ultimo:
+                self.initial.setdefault("corte", ultimo)
+                self.initial.setdefault("prs_fusionados", ultimo.prs_fusionados)
+
+    def clean(self):
+        datos = super().clean()
+        corte = datos.get("corte")
+        prs = datos.get("prs_fusionados")
+        if corte is None or prs is None:
+            return datos
+        # Son acumulados: un corte no puede tener menos PRs que uno anterior ni más que uno
+        # posterior.
+        anterior = corte.proyecto.cortes.filter(fecha__lt=corte.fecha).last()
+        siguiente = corte.proyecto.cortes.filter(fecha__gt=corte.fecha).first()
+        if anterior and prs < anterior.prs_fusionados:
+            self.add_error(
+                "prs_fusionados",
+                f"Son acumulados: no pueden ser menos que los {anterior.prs_fusionados} "
+                "del corte anterior.",
+            )
+        elif siguiente and prs > siguiente.prs_fusionados and siguiente.prs_fusionados:
+            self.add_error(
+                "prs_fusionados",
+                f"Son acumulados: no pueden ser más que los {siguiente.prs_fusionados} "
+                "del corte siguiente.",
+            )
+        return datos
+
+
+class CorteReporteForm(forms.Form):
+    """RF-15: elegir el corte del reporte de salud (por omisión, el último)."""
+
+    corte = forms.ModelChoiceField(
+        queryset=Corte.objects.none(),
+        label="Corte",
+        empty_label=None,
+        widget=forms.Select(attrs={"class": "input"}),
+    )
+
+    def __init__(self, *args, proyecto, **kwargs):
+        super().__init__(*args, **kwargs)
+        etiquetas = etiquetas_de_cortes(proyecto)
+        self.fields["corte"].queryset = proyecto.cortes.all()
+        self.fields["corte"].label_from_instance = lambda corte: etiquetas[corte.pk]
+

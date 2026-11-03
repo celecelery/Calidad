@@ -5,7 +5,7 @@ Se actualiza en cada PR que implementa o cambia un requisito.
 
 **Estados:** Pendiente · En progreso · Implementado (fusionado en main con pruebas en verde) · Verificado (además pasó la revisión de QA)
 
-**Última actualización:** 02/11/2026 — RF-06 y RF-07 fusionados (#13); tarea 7.2, RF-08 en progreso
+**Última actualización:** 03/11/2026 — RF-06 y RF-07 fusionados (#13); RF-05, RF-13, RF-14 y RF-15 en progreso (tareas 6.4, 8.2 y 9.1)
 
 ## Requisitos funcionales
 
@@ -15,7 +15,7 @@ Se actualiza en cada PR que implementa o cambia un requisito.
 | RF-02 | Registrar un proyecto; nombre y periodo obligatorios, nombre único por periodo | 20 oct | Sin issue (por crear) | #9, #10 | `dashboard/test_formularios.py`: `ProyectoFormTests`, `VistasFormulariosTests.test_post_proyecto_*`; `dashboard/test_modelos.py` | Verificado |
 | RF-03 | Editar los datos de un proyecto sin afectar a otros | 20 oct | Sin issue (por crear) | #11 | `dashboard/test_proyectos.py`: `EditarProyectoTests` | Verificado |
 | RF-04 | Listar proyectos filtrando por periodo y estado | 20 oct | Sin issue (por crear) | #11 | `dashboard/test_proyectos.py`: `ListaProyectosTests` | Verificado |
-| RF-05 | Archivar un proyecto sin borrarlo | 3 nov | — | #11 (solo el estado "Archivado" en el modelo) | — | En progreso |
+| RF-05 | Archivar un proyecto sin borrarlo | 3 nov | Por crear | Por crear (tarea 6.4) | `dashboard/test_archivar.py`: `ModeloArchivarTests`, `VistaArchivarTests`, `VistaReactivarTests`, `PantallasArchivarTests` | En progreso |
 | RF-06 | Administrar el catálogo de métricas | 3 nov | Por crear | #13 | `dashboard/test_metricas.py`: `MetricaFormTests`, `CatalogoVistasTests`, `MetaTextoTests`, `CumpleMetaTests` | Implementado |
 | RF-07 | Asignar las 6 métricas base a un proyecto nuevo | 3 nov | Por crear | #13 | `dashboard/test_metricas.py`: `MetricasBaseTests`, `AsignacionMetricasTests` | Implementado |
 | RF-08 | Capturar la medición de una métrica en un corte | 3 nov | Por crear | Por crear (rama `feature/rf-08-mediciones`, tarea 7.2) | `dashboard/test_mediciones.py`: `MedicionFormTests`, `CorteFormTests`, `CapturarMedicionVistaTests`, `AgregarCorteVistaTests`, `TablaMedicionesTests` | En progreso |
@@ -23,9 +23,9 @@ Se actualiza en cada PR que implementa o cambia un requisito.
 | RF-10 | Resumen de proyectos activos con semáforo en el dashboard | 3 nov | — | — | — | Pendiente |
 | RF-11 | Catálogo de técnicas SQA (al menos 8 precargadas) | 3 nov | — | — | — | Pendiente |
 | RF-12 | Asignar técnicas a un proyecto con frecuencia | 3 nov | — | — | — | Pendiente |
-| RF-13 | Registrar la aplicación de una técnica con evidencia | 3 nov | — | — | — | Pendiente |
-| RF-14 | Calcular el porcentaje de cumplimiento de técnicas | 3 nov | — | — | — | Pendiente |
-| RF-15 | Generar el reporte de salud de un proyecto en un corte | 3 nov | — | — | — | Pendiente |
+| RF-13 | Registrar la aplicación de una técnica con evidencia | 3 nov | Por crear | Por crear (tarea 8.2) | `dashboard/test_aplicaciones.py`: `AplicacionFormTests`, `RegistrarAplicacionVistaTests` | En progreso |
+| RF-14 | Calcular el porcentaje de cumplimiento de técnicas | 3 nov | Por crear | Por crear (tarea 8.2) | `dashboard/test_aplicaciones.py`: `EsperadasTests`, `PorcentajeTests`, `PestanaTecnicasCumplimientoTests`, `PrsFusionadosTests` | En progreso |
+| RF-15 | Generar el reporte de salud de un proyecto en un corte | 3 nov | Por crear | Por crear (tarea 9.1) | `dashboard/test_reporte_salud.py`: `CalcularSemaforoTests`, `ReporteDeSaludTests`, `ReporteVistaTests` | En progreso |
 | RF-16 | Comparar el reporte con el corte anterior | 19 nov | — | — | — | Pendiente |
 | RF-17 | Exportar el reporte a PDF | 19 nov | — | — | — | Pendiente |
 | RF-18 | Historial de reportes de un proyecto | 19 nov | — | — | — | Pendiente |
