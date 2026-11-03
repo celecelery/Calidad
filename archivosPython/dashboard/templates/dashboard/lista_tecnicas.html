@@ -1,0 +1,66 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Catálogo de técnicas SQA{% endblock %}
+
+{% block contenido %}
+{# RF-11, según el mockup «Catálogo de técnicas SQA»: la tabla y, al lado, el formulario #}
+<div class="page-head">
+    <div>
+        <div class="crumbs">Catálogos / Técnicas SQA</div>
+        <h1>Catálogo de técnicas SQA</h1>
+        <div class="sub">Prácticas de aseguramiento y control de calidad que se pueden asignar a los proyectos.</div>
+    </div>
+    <form class="actions" method="get" action="{% url 'lista_tecnicas' %}" role="search">
+        <label for="buscar" class="lbl">Buscar</label>
+        <input class="input" id="buscar" name="q" type="search" value="{{ busqueda }}" placeholder="Nombre o descripción" style="width: 240px;">
+        <button class="btn" type="submit">Buscar</button>
+    </form>
+</div>
+
+<div class="split">
+    <div class="stack" style="gap: 10px;">
+        <div class="table-wrap">
+            <table class="sheet">
+                <thead>
+                    <tr><th class="rn"></th><th>Técnica</th><th>Descripción</th><th>Referencia a norma</th><th class="num">En uso</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for tecnica in tecnicas %}
+                        <tr{% if tecnica.pk == tecnica_editada.pk %} class="sel"{% endif %}>
+                            <td class="rn">{{ forloop.counter }}</td>
+                            <td><b>{{ tecnica.nombre }}</b></td>
+                            <td>{{ tecnica.descripcion }}</td>
+                            <td>{% if tecnica.referencia_norma %}{{ tecnica.referencia_norma }}{% else %}<span class="muted">Sin referencia</span>{% endif %}</td>
+                            <td class="num" title="Proyectos que la tienen asignada">{{ tecnica.en_uso }}</td>
+                            <td class="c"><a class="btn sm" href="{% url 'editar_tecnica' tecnica.pk %}">Editar</a></td>
+                        </tr>
+                    {% empty %}
+                        <tr><td class="rn"></td><td colspan="5" class="muted">{% if busqueda %}Ninguna técnica coincide con «{{ busqueda }}».{% else %}El catálogo está vacío.{% endif %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if busqueda %}<p class="help" style="margin: 0;"><a href="{% url 'lista_tecnicas' %}">Quitar búsqueda</a></p>{% endif %}
+    </div>
+
+    {# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
+    <form class="card" method="post" novalidate
+          action="{% if tecnica_editada %}{% url 'editar_tecnica' tecnica_editada.pk %}{% else %}{% url 'tecnica_nueva' %}{% endif %}">
+        {% csrf_token %}
+        <div class="card-h"><h2>{% if tecnica_editada %}Editar técnica{% else %}Nueva técnica{% endif %}</h2></div>
+        <div class="card-b stack" style="gap: 14px;">
+            {% if formulario.non_field_errors %}<div class="alert bad">{{ formulario.non_field_errors }}</div>{% endif %}
+            {% for campo in formulario %}
+                {% include "dashboard/_campo.html" %}
+            {% endfor %}
+            <div class="form-foot">
+                <a class="btn" href="{% url 'lista_tecnicas' %}">Cancelar</a>
+                <button class="btn primary" type="submit">{% if tecnica_editada %}Guardar cambios{% else %}Agregar al catálogo{% endif %}</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block estado %}{% if formulario.errors %}{{ formulario.errors|length }} error{{ formulario.errors|length|pluralize:"es" }} en el formulario{% elif tecnica_editada %}Editando: {{ tecnica_editada.nombre }}{% else %}Listo{% endif %}{% endblock %}
+{% block estado_derecha %}{{ total }} técnica{{ total|pluralize }} en el catálogo · {{ con_referencia }} con referencia a norma{% endblock %}

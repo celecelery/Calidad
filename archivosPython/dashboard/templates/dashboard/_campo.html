@@ -1,0 +1,9 @@
+{# Un campo con su etiqueta, asterisco de obligatorio y errores, como en los mockups. Espera `campo`. #}
+<div class="field{% if campo.errors %} con-error{% endif %}">
+    <label for="{{ campo.id_for_label }}">{{ campo.label }}{% if campo.field.required %} <span class="req">*</span>{% endif %}</label>
+    {{ campo }}
+    {% if campo.help_text %}<span class="help">{{ campo.help_text }}</span>{% endif %}
+    {% for error in campo.errors %}
+        <span class="err-msg">{{ error }}</span>
+    {% endfor %}
+</div>

@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.functions import Lower
 
 # Create your models here.
 
@@ -58,9 +59,24 @@ class Proyecto(models.Model):
         verbose_name="Periodo",
     )
 
+    # RF-07: métricas que se le dan seguimiento a este proyecto.
+    metricas = models.ManyToManyField(
+        "Metrica",
+        blank=True,
+        related_name="proyectos",
+        verbose_name="Métricas asignadas",
+    )
+
     def __str__(self):
         return self.nombre
-    
+
+    def save(self, *args, **kwargs):
+        # RF-07: un proyecto nuevo recibe por defecto las métricas base (M-01 a M-06).
+        es_nuevo = self._state.adding
+        super().save(*args, **kwargs)
+        if es_nuevo:
+            self.metricas.add(*Metrica.objects.filter(es_base=True))
+
     class Meta:
         constraints = [
             models.UniqueConstraint(
@@ -92,30 +108,74 @@ class ReporteSalud(models.Model):
 
 class TecnicaSQA(models.Model):
     id_tecnica = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=150, default="", verbose_name="Nombre")
+    """RF-11: técnica del catálogo SQA (revisión, prueba, auditoría, etc.)."""
+
+    nombre = models.CharField(max_length=150, verbose_name="Nombre")
     descripcion = models.TextField(verbose_name="Descripción")
+    # Opcional: no todos los proyectos trabajan con una norma; puede ser una norma
+    # (IEEE 1028, ISO/IEC/IEEE 29119...) o una regla interna del equipo.
     referencia_norma = models.CharField(
-        max_length=150, verbose_name="Referencia de Norma"
+        max_length=150, blank=True, verbose_name="Referencia a norma"
     )
+
+    class Meta:
+        verbose_name = "Técnica SQA"
+        verbose_name_plural = "Técnicas SQA"
+        ordering = ["nombre"]
+        constraints = [
+            models.UniqueConstraint(Lower("nombre"), name="tecnica_nombre_unico"),
+        ]
 
     def __str__(self):
         return self.nombre or f"Técnica SQA {self.id_tecnica}"
 
 
 class AsignacionTecnica(models.Model):
+    """RF-12: técnica asignada a un proyecto, con responsable y frecuencia esperada."""
+
+    class Frecuencia(models.TextChoices):
+        POR_CORTE = "Por corte", "Por corte"
+        POR_PR = "Por PR", "Por PR"
+        UNICA = "Única", "Única"
+
     # Relación que involucra a Proyecto, TécnicasSQA y Usuario con el atributo 'Frecuencia'
-    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
-    tecnica = models.ForeignKey(TecnicaSQA, on_delete=models.CASCADE)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
-    frecuencia = models.CharField(max_length=50, verbose_name="Frecuencia")
+    proyecto = models.ForeignKey(
+        Proyecto,
+        on_delete=models.CASCADE,
+        related_name="asignaciones_tecnicas",
+        verbose_name="Proyecto",
+    )
+    tecnica = models.ForeignKey(
+        TecnicaSQA,
+        on_delete=models.CASCADE,
+        related_name="asignaciones",
+        verbose_name="Técnica",
+    )
+    # Responsable de aplicar la técnica en el proyecto.
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="tecnicas_asignadas",
+        verbose_name="Responsable",
+    )
+    frecuencia = models.CharField(
+        max_length=50, choices=Frecuencia.choices, verbose_name="Frecuencia"
+    )
 
     class Meta:
+        verbose_name = "Asignación de técnica"
+        verbose_name_plural = "Asignaciones de técnicas"
         constraints = [
+            # Una técnica se asigna una sola vez por proyecto (con un responsable).
+            # Así RF-14 no cuenta dos veces las aplicaciones esperadas de la misma técnica.
             models.UniqueConstraint(
-                fields=["proyecto", "tecnica", "usuario"],
+                fields=["proyecto", "tecnica"],
                 name="asignacion_unica",
             )
         ]
+
+    def __str__(self):
+        return f"{self.tecnica} en {self.proyecto} ({self.frecuencia})"
 
 class AplicacionTecnica(models.Model):
     id_aplicacion = models.AutoField(primary_key=True)
@@ -146,17 +206,68 @@ class AplicacionTecnica(models.Model):
 
 
 class Metrica(models.Model):
+    """RF-06: catálogo de métricas de calidad (sección 7 de la SRS)."""
+
+    class Tipo(models.TextChoices):
+        PRUEBAS = "Pruebas", "Pruebas"
+        PRODUCTO = "Producto", "Producto"
+        PROCESO = "Proceso", "Proceso"
+        GESTION = "Gestión", "Gestión"
+
+    class Sentido(models.TextChoices):
+        MAYOR_IGUAL = ">=", "Igual o mayor"
+        MENOR_IGUAL = "<=", "Igual o menor"
+
+    class Unidad(models.TextChoices):
+        PORCENTAJE = "%", "%"
+        CONTEO = "conteo", "conteo"
+
     id_metrica = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=100, verbose_name="Nombre")
-    unidad = models.CharField(max_length=50, verbose_name="Unidad")
-    tipo = models.CharField(max_length=50, verbose_name="Tipo")
+    clave = models.CharField(max_length=10, blank=True, verbose_name="Clave")
+    nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre")
+    unidad = models.CharField(max_length=50, choices=Unidad.choices, verbose_name="Unidad")
+    tipo = models.CharField(max_length=50, choices=Tipo.choices, verbose_name="Tipo")
     formula = models.TextField(verbose_name="Fórmula")
     meta = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Meta")
-    fuente = models.CharField(max_length=100, verbose_name="Fuente")
-    sentido = models.CharField(max_length=50, verbose_name="Sentido")
+    fuente = models.CharField(max_length=100, blank=True, verbose_name="Fuente")
+    sentido = models.CharField(
+        max_length=2,
+        choices=Sentido.choices,
+        default=Sentido.MAYOR_IGUAL,
+        verbose_name="Sentido de la meta",
+    )
+    # RF-07: las métricas base se asignan solas a cada proyecto nuevo.
+    es_base = models.BooleanField(default=False, verbose_name="Métrica base")
+
+    class Meta:
+        ordering = ["-es_base", "clave", "nombre"]
 
     def __str__(self):
-        return self.nombre
+        return f"{self.clave} {self.nombre}" if self.clave else self.nombre
+
+    @property
+    def meta_corta(self):
+        """Meta con su sentido, como en los mockups: «≥ 70», «≤ 0», «= 100» (100 % no se rebasa)."""
+        if self.sentido == self.Sentido.MENOR_IGUAL:
+            simbolo = "≤"
+        elif self.unidad == self.Unidad.PORCENTAJE and self.meta == 100:
+            simbolo = "="
+        else:
+            simbolo = "≥"
+        return f"{simbolo} {self.meta.normalize():f}"
+
+    @property
+    def meta_texto(self):
+        """Meta con sentido y, si es porcentaje, su unidad: «≥ 70 %», «≤ 0»."""
+        if self.unidad == self.Unidad.PORCENTAJE:
+            return f"{self.meta_corta} %"
+        return self.meta_corta
+
+    def cumple(self, valor):
+        """Indica si un valor medido alcanza la meta según el sentido de la métrica."""
+        if self.sentido == self.Sentido.MENOR_IGUAL:
+            return valor <= self.meta
+        return valor >= self.meta
 
 
 class MetricaProyecto(models.Model):

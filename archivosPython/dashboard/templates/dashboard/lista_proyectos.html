@@ -1,62 +1,55 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Proyectos</title>
-    <style>
-        form.filtros { margin-bottom: 1rem; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid #ddd; }
-        th { background: #f1f5f9; }
-    </style>
-</head>
-<body>
-    {% include "dashboard/_menu.html" %}
+{% extends "dashboard/base.html" %}
 
-    <h1>Proyectos</h1>
+{% block titulo %}Proyectos{% endblock %}
 
-    {% for mensaje in messages %}
-        <p class="exito">{{ mensaje }}</p>
-    {% endfor %}
+{% block contenido %}
+<div class="page-head">
+    <div>
+        <div class="crumbs"><a href="{% url 'inicio' %}">Inicio</a> / Proyectos</div>
+        <h1>Proyectos</h1>
+        <div class="sub">Todos los proyectos registrados, incluidos los archivados.</div>
+    </div>
+    <div class="actions"><a class="btn primary" href="{% url 'proyecto_nuevo' %}">+ Registrar proyecto</a></div>
+</div>
 
-    {# RF-04: los dos filtros se combinan #}
-    <form method="get" class="filtros">
-        <label for="{{ filtro.periodo.id_for_label }}">Periodo</label>
-        {{ filtro.periodo }}
-        <label for="{{ filtro.estado.id_for_label }}">Estado</label>
-        {{ filtro.estado }}
-        <button type="submit">Filtrar</button>
-        <a href="{% url 'lista_proyectos' %}">Quitar filtros</a>
-    </form>
+{# RF-04: los dos filtros se combinan #}
+<form class="card" method="get" style="margin-bottom: 16px;">
+    <div class="card-b" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;">
+        <div class="field" style="flex: 1 1 200px;"><label for="{{ filtro.periodo.id_for_label }}">Periodo</label>{{ filtro.periodo }}</div>
+        <div class="field" style="flex: 1 1 200px;"><label for="{{ filtro.estado.id_for_label }}">Estado</label>{{ filtro.estado }}</div>
+        <div class="actions"><button class="btn primary" type="submit">Filtrar</button><a class="btn" href="{% url 'lista_proyectos' %}">Quitar filtros</a></div>
+    </div>
+</form>
 
-    <table>
+<div class="table-wrap">
+    <table class="sheet">
         <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Periodo</th>
-                <th>Líder</th>
-                <th>Integrantes</th>
-                <th>Estado</th>
-                <th></th>
-            </tr>
+            <tr><th class="rn"></th><th>Nombre</th><th>Periodo</th><th>Líder</th><th class="num">Integrantes</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
         <tbody>
             {% for proyecto in proyectos %}
-                <tr>
-                    <td>{{ proyecto.nombre }}</td>
+                <tr{% if proyecto.estado == "Archivado" %} class="archived"{% endif %}>
+                    <td class="rn">{{ forloop.counter }}</td>
+                    <td>{% if proyecto.estado == "Archivado" %}{{ proyecto.nombre }}{% else %}<b>{{ proyecto.nombre }}</b>{% endif %}</td>
                     <td>{{ proyecto.periodo }}</td>
                     <td>{{ proyecto.lider }}</td>
-                    <td>{{ proyecto.integrantes }}</td>
-                    <td>{{ proyecto.estado }}</td>
-                    <td><a href="{% url 'editar_proyecto' proyecto.pk %}">Editar</a></td>
+                    <td class="num">{{ proyecto.integrantes }}</td>
+                    <td><span class="pill gray">{{ proyecto.estado }}</span></td>
+                    <td>
+                        <div class="actions">
+                            <a class="btn sm" href="{% url 'editar_proyecto' proyecto.pk %}">Editar</a>
+                            <a class="btn sm" href="{% url 'metricas_proyecto' proyecto.pk %}">Mediciones</a>
+                            <a class="btn sm" href="{% url 'tecnicas_proyecto' proyecto.pk %}">Técnicas</a>
+                        </div>
+                    </td>
                 </tr>
             {% empty %}
-                <tr>
-                    <td colspan="6">No hay proyectos que coincidan con los filtros.</td>
-                </tr>
+                <tr><td class="rn"></td><td colspan="6" class="muted">No hay proyectos que coincidan con los filtros.</td></tr>
             {% endfor %}
         </tbody>
     </table>
-</body>
-</html>
+</div>
+<p class="help" style="margin: 10px 0 0;">Los archivados no aparecen en el menú lateral, pero se conservan con su historial.</p>
+{% endblock %}
+
+{% block estado_derecha %}{{ proyectos|length }} proyecto{{ proyectos|length|pluralize }}{% endblock %}

@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Periodo, Proyecto
+from .models import AsignacionTecnica, Metrica, Periodo, Proyecto, TecnicaSQA, Usuario
 
 MENSAJE_OBLIGATORIO = "Este campo es obligatorio."
 
@@ -125,3 +125,196 @@ class FiltroProyectosForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={"class": "form-control"}),
     )
+
+class MetricaForm(forms.ModelForm):
+    """RF-06: alta y edición de una métrica del catálogo. No se guarda sin meta ni tipo."""
+
+    class Meta:
+        model = Metrica
+        fields = ["clave", "nombre", "tipo", "formula", "unidad", "meta", "sentido", "fuente"]
+        labels = {
+            "clave": "ID",
+            "nombre": "Nombre",
+            "tipo": "Tipo",
+            "formula": "Fórmula",
+            "unidad": "Unidad",
+            "meta": "Meta",
+            "sentido": "Sentido de la meta",
+            "fuente": "Fuente de datos",
+        }
+        widgets = {
+            "clave": forms.TextInput(attrs={"class": "input", "placeholder": "M-07"}),
+            "nombre": forms.TextInput(attrs={"class": "input"}),
+            "tipo": forms.Select(attrs={"class": "input"}),
+            "formula": forms.Textarea(attrs={"class": "input", "rows": 2}),
+            "unidad": forms.Select(attrs={"class": "input"}),
+            "meta": forms.TextInput(attrs={"class": "input", "inputmode": "decimal"}),
+            "sentido": forms.RadioSelect,
+            "fuente": forms.TextInput(attrs={"class": "input"}),
+        }
+        error_messages = {
+            "nombre": {"required": MENSAJE_OBLIGATORIO},
+            "tipo": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona un tipo de la lista.",
+            },
+            "formula": {"required": MENSAJE_OBLIGATORIO},
+            "unidad": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona una unidad de la lista.",
+            },
+            "meta": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid": "Escribe un número.",
+            },
+            "sentido": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona un sentido de la lista.",
+            },
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Sin opción vacía preseleccionada: el tipo se elige a propósito.
+        self.fields["tipo"].choices = [("", "Selecciona un tipo"), *Metrica.Tipo.choices]
+        # La unidad no tiene opción vacía; casi todas las métricas son porcentaje.
+        self.fields["unidad"].choices = Metrica.Unidad.choices
+        if not self.instance.pk:
+            self.initial.setdefault("unidad", Metrica.Unidad.PORCENTAJE)
+        # La meta se muestra como en el mockup («90», no «90.00»).
+        if self.instance.pk and not self.is_bound:
+            self.initial["meta"] = f"{self.instance.meta.normalize():f}"
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data["nombre"].strip()
+        # Se compara en Python: el iexact de SQLite no iguala mayúsculas con acento (Ó / ó).
+        otras = Metrica.objects.exclude(pk=self.instance.pk).values_list("nombre", flat=True)
+        if any(otra.casefold() == nombre.casefold() for otra in otras):
+            raise forms.ValidationError("Ya existe una métrica con ese nombre en el catálogo.")
+        return nombre
+
+    def clean_meta(self):
+        meta = self.cleaned_data["meta"]
+        if meta < 0:
+            raise forms.ValidationError("La meta no puede ser negativa.")
+        return meta
+
+    def clean(self):
+        datos = super().clean()
+        meta = datos.get("meta")
+        if datos.get("unidad") == Metrica.Unidad.PORCENTAJE and meta is not None and meta > 100:
+            self.add_error("meta", "Fuera de rango: un porcentaje va de 0 a 100.")
+        return datos
+
+
+class AsignarMetricaForm(forms.Form):
+    """RF-07: asignar a un proyecto una métrica del catálogo que todavía no tenga."""
+
+    metrica = forms.ModelChoiceField(
+        queryset=Metrica.objects.none(),
+        label="Métrica",
+        empty_label="Selecciona una métrica",
+        widget=forms.Select(attrs={"class": "input"}),
+        error_messages={
+            "required": "Selecciona una métrica.",
+            "invalid_choice": "Selecciona una métrica del catálogo que no esté asignada.",
+        },
+    )
+
+    def __init__(self, *args, proyecto, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["metrica"].queryset = Metrica.objects.exclude(proyectos=proyecto)
+
+
+class TecnicaSQAForm(forms.ModelForm):
+    """RF-11: alta y edición de una técnica del catálogo. Se valida en el servidor (RNF-04)."""
+
+    class Meta:
+        model = TecnicaSQA
+        fields = ["nombre", "descripcion", "referencia_norma"]
+        labels = {
+            "nombre": "Nombre",
+            "descripcion": "Descripción",
+            "referencia_norma": "Referencia a norma (opcional)",
+        }
+        help_texts = {
+            "referencia_norma": "Déjalo vacío si la técnica no viene de una norma.",
+        }
+        widgets = {
+            "nombre": forms.TextInput(attrs={"class": "input"}),
+            "descripcion": forms.Textarea(attrs={"class": "input", "rows": 3}),
+            "referencia_norma": forms.TextInput(
+                attrs={
+                    "class": "input",
+                    "placeholder": "IEEE 1028, ISO/IEC/IEEE 29119, regla del equipo…",
+                }
+            ),
+        }
+        error_messages = {
+            "nombre": {"required": MENSAJE_OBLIGATORIO},
+            "descripcion": {"required": MENSAJE_OBLIGATORIO},
+        }
+
+    # Los CharField de Django ya quitan los espacios sobrantes, así que un nombre o una
+    # descripción hechos solo de espacios llegan vacíos y fallan como obligatorios.
+    def clean_nombre(self):
+        nombre = self.cleaned_data["nombre"]
+        repetidas = TecnicaSQA.objects.filter(nombre__iexact=nombre)
+        if self.instance.pk:
+            repetidas = repetidas.exclude(pk=self.instance.pk)
+        if repetidas.exists():
+            raise forms.ValidationError("Ya existe una técnica con ese nombre en el catálogo.")
+        return nombre
+
+
+class AsignacionTecnicaForm(forms.ModelForm):
+    """RF-12: asignar una técnica a un proyecto con responsable y frecuencia esperada.
+
+    El proyecto no es un campo del formulario: lo fija la vista con la URL. La lista de
+    técnicas solo ofrece las que el proyecto todavía no tiene asignadas.
+    """
+
+    class Meta:
+        model = AsignacionTecnica
+        fields = ["tecnica", "usuario", "frecuencia"]
+        labels = {
+            "tecnica": "Técnica",
+            "usuario": "Responsable",
+            "frecuencia": "Frecuencia esperada",
+        }
+        widgets = {
+            "tecnica": forms.Select(attrs={"class": "input"}),
+            "usuario": forms.Select(attrs={"class": "input"}),
+            "frecuencia": forms.RadioSelect,
+        }
+        error_messages = {
+            "tecnica": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona una técnica del catálogo que el proyecto no tenga "
+                "asignada.",
+            },
+            "usuario": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona un responsable de la lista.",
+            },
+            "frecuencia": {
+                "required": MENSAJE_OBLIGATORIO,
+                "invalid_choice": "Selecciona una frecuencia: por corte, por PR o única.",
+            },
+        }
+
+    def __init__(self, *args, proyecto, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proyecto = proyecto
+        self.instance.proyecto = proyecto
+        asignadas = AsignacionTecnica.objects.filter(proyecto=proyecto)
+        if self.instance.pk:
+            asignadas = asignadas.exclude(pk=self.instance.pk)
+        self.fields["tecnica"].queryset = TecnicaSQA.objects.exclude(
+            asignaciones__in=asignadas
+        ).order_by("nombre")
+        self.fields["tecnica"].empty_label = "Selecciona una técnica"
+        self.fields["usuario"].queryset = Usuario.objects.order_by("nombre")
+        self.fields["usuario"].empty_label = "Selecciona un responsable"
+        # Sin la opción vacía "---------" que Django agrega a los radios.
+        self.fields["frecuencia"].choices = AsignacionTecnica.Frecuencia.choices
