@@ -109,6 +109,10 @@ class TecnicasBaseTest(TestCase):
         cls.usuario = get_user_model().objects.create_user(
             username="celeste", password="clave-segura-123"
         )
+        # Perfil de administrador ligado al usuario que inicia sesión en las pruebas.
+        cls.admin = Usuario.objects.create(
+            nombre="Admin de pruebas", perfil="administrador", user=cls.usuario
+        )
         cls.ana = Usuario.objects.create(nombre="Ana", perfil="Miembro")
         cls.luis = Usuario.objects.create(nombre="Luis", perfil="Miembro")
         periodo = Periodo.objects.create(
