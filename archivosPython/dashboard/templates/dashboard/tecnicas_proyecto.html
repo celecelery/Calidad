@@ -1,0 +1,69 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Técnicas SQA — {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+{% include "dashboard/_pestanas_proyecto.html" with activa="tecnicas" %}
+
+{# RF-12, según el mockup «Técnicas del proyecto» #}
+<div class="kpis">
+    <div class="kpi"><div class="k">Técnicas asignadas</div><div class="v">{{ asignaciones|length }}</div><div class="h">de {{ total_catalogo }} en el catálogo</div></div>
+    <div class="kpi"><div class="k">Aplicaciones registradas</div><div class="v">{{ aplicaciones }}</div><div class="h">con su enlace de evidencia</div></div>
+</div>
+
+{# Cada asignación tiene responsable y frecuencia; novalidate para validar en el servidor (RNF-04) #}
+<form class="card" method="post" novalidate style="margin-bottom: 18px;">
+    {% csrf_token %}
+    <div class="card-h"><h2>Asignar técnica</h2><span class="help">Solo aparecen las técnicas que el proyecto todavía no tiene</span></div>
+    <div class="card-b">
+        {% if formulario.non_field_errors %}<div class="alert bad">{{ formulario.non_field_errors }}</div>{% endif %}
+        {% if formulario.fields.tecnica.queryset.exists %}
+            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: end;">
+                {% include "dashboard/_campo.html" with campo=formulario.tecnica %}
+                {% include "dashboard/_campo.html" with campo=formulario.usuario %}
+                <fieldset style="border: 0; margin: 0; padding: 0; min-width: 0;">
+                    <legend class="lbl" style="margin-bottom: 6px;">{{ formulario.frecuencia.label }} <span class="req">*</span></legend>
+                    <div class="radios" style="gap: 4px 16px;">
+                        {% for opcion in formulario.frecuencia %}
+                            <label class="radio" for="{{ opcion.id_for_label }}">{{ opcion.tag }}{{ opcion.choice_label }}</label>
+                        {% endfor %}
+                    </div>
+                    {% for error in formulario.frecuencia.errors %}<span class="err-msg">{{ error }}</span>{% endfor %}
+                </fieldset>
+                <button class="btn primary" type="submit">Asignar</button>
+            </div>
+        {% else %}
+            <p class="muted" style="margin: 0;">Todas las técnicas del catálogo ya están asignadas a este proyecto. <a href="{% url 'lista_tecnicas' %}">Ver catálogo</a></p>
+        {% endif %}
+    </div>
+</form>
+
+<div class="page-head" style="margin-bottom: 10px;">
+    <h2>Técnicas del proyecto</h2>
+</div>
+<div class="table-wrap">
+    <table class="sheet">
+        <thead>
+            <tr><th class="rn"></th><th>Técnica</th><th>Responsable</th><th>Frecuencia</th><th>Referencia a norma</th><th class="num">Aplicaciones registradas</th></tr>
+        </thead>
+        <tbody>
+            {% for asignacion in asignaciones %}
+                <tr>
+                    <td class="rn">{{ forloop.counter }}</td>
+                    <td><b>{{ asignacion.tecnica.nombre }}</b></td>
+                    <td>{{ asignacion.usuario }}</td>
+                    <td>{{ asignacion.frecuencia }}</td>
+                    <td>{% if asignacion.tecnica.referencia_norma %}{{ asignacion.tecnica.referencia_norma }}{% else %}<span class="muted">Sin referencia</span>{% endif %}</td>
+                    <td class="num">{{ asignacion.registradas }}</td>
+                </tr>
+            {% empty %}
+                <tr><td class="rn"></td><td colspan="5" class="muted">Este proyecto todavía no tiene técnicas asignadas.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="help" style="margin: 10px 0 0;">El registro de aplicaciones con evidencia y el porcentaje de cumplimiento llegan con RF-13 y RF-14.</p>
+{% endblock %}
+
+{% block estado %}{% if formulario.errors %}{{ formulario.errors|length }} error{{ formulario.errors|length|pluralize:"es" }} en el formulario{% else %}Listo{% endif %}{% endblock %}
+{% block estado_derecha %}{{ asignaciones|length }} técnica{{ asignaciones|length|pluralize }} asignada{{ asignaciones|length|pluralize }}{% endblock %}

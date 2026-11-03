@@ -11,7 +11,7 @@
     <a class="tab{% if activa == 'datos' %} on{% endif %}" href="{% url 'editar_proyecto' proyecto.pk %}" {% if activa == 'datos' %}aria-current="page"{% endif %}>Datos</a>
     <a class="tab{% if activa == 'mediciones' %} on{% endif %}" href="{% url 'metricas_proyecto' proyecto.pk %}" {% if activa == 'mediciones' %}aria-current="page"{% endif %}>Mediciones</a>
     <span class="tab off" aria-disabled="true" title="Próximamente (RF-09)">Evolución</span>
-    <span class="tab off" aria-disabled="true" title="Próximamente (RF-12)">Técnicas SQA</span>
+    <a class="tab{% if activa == 'tecnicas' %} on{% endif %}" href="{% url 'tecnicas_proyecto' proyecto.pk %}" {% if activa == 'tecnicas' %}aria-current="page"{% endif %}>Técnicas SQA</a>
     <span class="tab off" aria-disabled="true" title="Próximamente (RF-15)">Reporte de salud</span>
     <span class="tab off" aria-disabled="true" title="Próximamente (RF-18)">Historial</span>
 </nav>
