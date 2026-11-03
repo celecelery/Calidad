@@ -5,7 +5,7 @@ Se actualiza en cada PR que implementa o cambia un requisito.
 
 **Estados:** Pendiente · En progreso · Implementado (fusionado en main con pruebas en verde) · Verificado (además pasó la revisión de QA)
 
-**Última actualización:** 03/11/2026 — tarea 10.2: casos de prueba de RF-05 a RF-15 y RF-20; RF-08 (#14), RF-11 y RF-12 (#16), RF-05, RF-13, RF-14 y RF-15 (#17) fusionados
+**Última actualización:** 03/11/2026 — tarea 10.3: flujo completo automatizado (CP-INT-01 a CP-INT-06) y cálculos del semáforo y del cumplimiento al 100 % de cobertura; tarea 10.2: casos de prueba de RF-05 a RF-15 y RF-20; RF-08 (#14), RF-11 y RF-12 (#16), RF-05, RF-13, RF-14 y RF-15 (#17) fusionados
 
 ## Requisitos funcionales
 
@@ -24,8 +24,8 @@ Se actualiza en cada PR que implementa o cambia un requisito.
 | RF-11 | Catálogo de técnicas SQA (al menos 8 precargadas) | 3 nov | Por crear | #16 | CP-11-01 a CP-11-03 | `dashboard/test_tecnicas.py`: `CatalogoPrecargadoTests`, `TecnicaSQAFormTests`, `CatalogoVistasTests` | Implementado |
 | RF-12 | Asignar técnicas a un proyecto con responsable y frecuencia | 3 nov | Por crear | #16 | CP-12-01 a CP-12-03 | `dashboard/test_tecnicas.py`: `AsignacionTecnicaFormTests`, `TecnicasProyectoVistaTests` | Implementado |
 | RF-13 | Registrar la aplicación de una técnica con evidencia | 3 nov | Por crear | #17 | CP-13-01 a CP-13-04 | `dashboard/test_aplicaciones.py`: `AplicacionFormTests`, `RegistrarAplicacionVistaTests` | Implementado |
-| RF-14 | Calcular el porcentaje de cumplimiento de técnicas | 3 nov | Por crear | #17 | CP-14-01 a CP-14-07 | `dashboard/test_aplicaciones.py`: `EsperadasTests`, `PorcentajeTests`, `PestanaTecnicasCumplimientoTests`, `PrsFusionadosTests` | Implementado |
-| RF-15 | Generar el reporte de salud de un proyecto en un corte | 3 nov | Por crear | #17 | CP-15-01 a CP-15-13; flujo completo CP-INT-01 a CP-INT-06 | `dashboard/test_reporte_salud.py`: `CalcularSemaforoTests`, `ReporteDeSaludTests`, `ReporteVistaTests`. Flujo completo: por automatizar (10.3) | Implementado |
+| RF-14 | Calcular el porcentaje de cumplimiento de técnicas | 3 nov | Por crear | #17 | CP-14-01 a CP-14-07 | `dashboard/test_aplicaciones.py`: `EsperadasTests`, `PorcentajeTests`, `PestanaTecnicasCumplimientoTests`, `PrsFusionadosTests`; `dashboard/test_calculos.py`: `EsperadasFrecuenciaTests` | Implementado |
+| RF-15 | Generar el reporte de salud de un proyecto en un corte | 3 nov | Por crear | #17 | CP-15-01 a CP-15-13; flujo completo CP-INT-01 a CP-INT-06 | `dashboard/test_reporte_salud.py`: `CalcularSemaforoTests`, `ReporteDeSaludTests`, `ReporteVistaTests`; `dashboard/test_calculos.py`: `MotivoDelSemaforoTests`; flujo completo en `dashboard/test_integracion.py`: `FlujoCompletoTests` (tarea 10.3) | Implementado |
 | RF-16 | Comparar el reporte con el corte anterior | 19 nov | — | — | — | — | Pendiente |
 | RF-17 | Exportar el reporte a PDF | 19 nov | — | — | — | — | Pendiente |
 | RF-18 | Historial de reportes de un proyecto | 19 nov | — | — | — | — | Pendiente |

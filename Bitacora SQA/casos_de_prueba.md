@@ -9,7 +9,7 @@ Tarea 10.2. Casos escritos a partir del **criterio de aceptación** de cada requ
 - **Integración:** recorre varias pantallas como lo haría un usuario.
 - **Manual:** la hace una persona en el navegador.
 
-**Columna «Automatizada en»:** archivo y nombre de la prueba de pytest que cubre el caso (`archivo › prueba`, dentro de `archivosPython/dashboard/`). «Por automatizar (10.3)» significa que la prueba se escribe en la tarea 10.3. «Pendiente de implementar» significa que el requisito todavía no está en `main`.
+**Columna «Automatizada en»:** archivo y nombre de la prueba de pytest que cubre el caso (`archivo › prueba`, dentro de `archivosPython/dashboard/`). «Pendiente de implementar» significa que el requisito todavía no está en `main`.
 
 **Datos comunes:** periodo *Ago–Dic 2026* (10/08/2026 – 15/12/2026), proyecto *Dashboard SQA* con las 6 métricas base (M-01 a M-06) y corte del 20/10/2026, salvo que el caso diga otra cosa.
 
@@ -27,30 +27,30 @@ Tarea 10.2. Casos escritos a partir del **criterio de aceptación** de cada requ
 |---|---|---|---|---|---|
 | CP-15-01 | Unitaria | Calcular el reporte del corte | 5 de 6 metas cumplidas (83 %), M-03 = 0, técnicas al 100 % | Semáforo **Verde** | `test_reporte_salud.py` › `test_verde_con_5_de_6_metas_sin_criticos_y_tecnicas_al_100` |
 | CP-15-02 | Unitaria | Calcular el reporte del corte | 4 de 6 metas (67 %), M-03 = 0, técnicas al 100 % | Semáforo **Amarillo** | `test_reporte_salud.py` › `test_amarillo_con_4_de_6_metas` |
-| CP-15-03 | Unitaria | Calcular el semáforo | Metas al 100 %, M-03 = 0, técnicas al 60 % y al 79.9 % | Semáforo **Amarillo** en los dos casos | `test_reporte_salud.py` › `test_amarillo_por_tecnicas_entre_60_y_79` |
+| CP-15-03 | Unitaria | Calcular el semáforo | Metas al 100 %, M-03 = 0, técnicas al 60 % y al 79.9 % | Semáforo **Amarillo** en los dos casos; el reporte explica que las técnicas van entre 60 y 79 % | `test_reporte_salud.py` › `test_amarillo_por_tecnicas_entre_60_y_79`; `test_calculos.py` › `test_cp_15_03_tecnicas_entre_60_y_79_lo_explica` |
 | CP-15-04 | Unitaria | Calcular el reporte del corte | Todas las metas cumplidas salvo M-03 = 1 (un defecto crítico abierto), técnicas al 100 % | Semáforo **Rojo**; M-03 se evalúa con sentido «igual o menor» | `test_reporte_salud.py` › `test_rojo_con_un_defecto_critico_respeta_el_sentido_de_m03` |
 | CP-15-05 | Unitaria | Calcular el reporte del corte | 2 de 6 metas (33 %), técnicas bajas | Semáforo **Rojo** | `test_reporte_salud.py` › `test_rojo_con_2_de_6_metas_y_tecnicas_bajas` |
 | CP-15-06 | Unitaria | Calcular el semáforo | Metas al 100 %, M-03 = 0, técnicas al 59.9 % | Semáforo **Rojo** | `test_reporte_salud.py` › `test_rojo_por_tecnicas_menores_a_60` |
 | CP-15-07 | Unitaria | Calcular el semáforo en los límites | Metas 49.9 / 50 / 82.9 / 83 %; técnicas 59.9 / 60 / 79.9 / 80 % | 49.9 % → Rojo; 50 % y 82.9 % → Amarillo; 83 % → Verde. Técnicas: 59.9 % → Rojo; 60 % y 79.9 % → Amarillo; 80 % → Verde | `test_reporte_salud.py` › `test_rojo_por_menos_del_50_por_ciento_de_metas`, `test_amarillo_por_metas_entre_50_y_82`, `test_limites_del_verde`, `test_metas_de_6_metricas` |
 | CP-15-08 | Unitaria | Calcular el semáforo | Metas al 66 % (Amarillo) y técnicas al 50 % (Rojo) a la vez | Gana la regla más estricta: **Rojo** | `test_reporte_salud.py` › `test_rojo_gana_aunque_tambien_aplique_amarillo` |
-| CP-15-09 | Unitaria | Calcular el reporte de un corte con una métrica sin capturar | 5 métricas capturadas que cumplen y 1 sin medición | La métrica sin medición cuenta como **no cumplida** y el reporte dice cuántas faltan | `test_reporte_salud.py` › `test_medicion_faltante_cuenta_como_meta_no_cumplida` |
-| CP-15-10 | Unitaria | Calcular el semáforo con datos inexistentes | (a) sin aplicaciones de técnicas esperadas; (b) sin medición de M-03; (c) sin métricas asignadas; (d) metas al 40 % sin M-03 ni técnicas | (a), (b) y (c): como máximo **Amarillo**, nunca Verde; (d): sigue en **Rojo** | `test_reporte_salud.py` › `test_sin_tecnicas_esperadas_no_puede_ser_verde`, `test_sin_medicion_de_defectos_no_puede_ser_verde`, `test_sin_metricas_no_puede_ser_verde`, `test_dato_inexistente_no_quita_el_rojo` |
+| CP-15-09 | Unitaria | Calcular el reporte de un corte con una métrica sin capturar | 5 métricas capturadas que cumplen y 1 sin medición | La métrica sin medición cuenta como **no cumplida** y el reporte dice cuántas faltan («Falta 1 medición…», «Faltan 2 mediciones…») | `test_reporte_salud.py` › `test_medicion_faltante_cuenta_como_meta_no_cumplida`; `test_integracion.py` › `test_aviso_de_mediciones_faltantes_en_plural` |
+| CP-15-10 | Unitaria | Calcular el semáforo con datos inexistentes | (a) sin aplicaciones de técnicas esperadas; (b) sin medición de M-03; (c) sin métricas asignadas; (d) metas al 40 % sin M-03 ni técnicas | (a), (b) y (c): como máximo **Amarillo**, nunca Verde; (d): sigue en **Rojo** | `test_reporte_salud.py` › `test_sin_tecnicas_esperadas_no_puede_ser_verde`, `test_sin_medicion_de_defectos_no_puede_ser_verde`, `test_sin_metricas_no_puede_ser_verde`, `test_dato_inexistente_no_quita_el_rojo`; `test_calculos.py` › `test_cp_15_10_sin_metricas_asignadas`, `test_cp_15_10_m03_asignada_pero_sin_medicion` |
 | CP-15-11 | Integración | Abrir Proyectos › proyecto › Reporte de salud | Proyecto con mediciones y una técnica con evidencia | La pantalla muestra el semáforo, la tabla de métricas (valor, meta y si cumple) y las técnicas con su porcentaje y enlaces de evidencia | `test_reporte_salud.py` › `test_tabla_de_metricas_con_valor_meta_y_si_cumple`, `test_tecnicas_con_enlaces_de_evidencia` |
 | CP-15-12 | Integración | Elegir un corte anterior en el selector del reporte | Corte 1 con valores que no cumplen; corte 2 con valores que sí | El reporte usa solo las mediciones y aplicaciones hasta la fecha del corte elegido | `test_reporte_salud.py` › `test_usa_las_mediciones_del_corte_elegido`, `test_elegir_otro_corte` |
 | CP-15-13 | Integración | Abrir el reporte de un proyecto sin cortes | Proyecto recién registrado | Aviso de que no hay cortes; no se muestra semáforo | `test_reporte_salud.py` › `test_sin_cortes_avisa` |
 
 ## Flujo completo — registrar proyecto → capturar medición → generar reporte
 
-Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Django. Un caso por cada color del semáforo.
+Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Django. Un caso por cada color del semáforo. Automatizados en la tarea 10.3.
 
 | ID | Tipo | Pasos | Datos | Resultado esperado | Automatizada en |
 |---|---|---|---|---|---|
-| CP-INT-01 | Integración | 1. Registrar el periodo. 2. Registrar el proyecto. 3. Agregar un corte. 4. Capturar M-01 a M-06. 5. Asignar «Revisión de pares» por corte. 6. Registrar su aplicación con evidencia. 7. Abrir el reporte | M-01 = 80, M-02 = 97, M-03 = 0, M-04 = 92, M-05 = 100, M-06 = 95; aplicación del 15/10/2026 con enlace a un PR | Cada paso redirige sin errores; el reporte muestra 6 de 6 metas, técnicas al 100 % y semáforo **Verde** | Por automatizar (10.3) |
-| CP-INT-02 | Integración | Igual que CP-INT-01 | M-01 = 60 y M-04 = 85 (no cumplen); las demás cumplen | 4 de 6 metas y semáforo **Amarillo** | Por automatizar (10.3) |
-| CP-INT-03 | Integración | Igual que CP-INT-01 | M-03 = 1; las demás cumplen | Semáforo **Rojo** por el defecto crítico | Por automatizar (10.3) |
-| CP-INT-04 | Integración | Igual que CP-INT-01, pero con dos cortes (15/09 y 20/10) y una sola aplicación | Técnica por corte: 1 de 2 aplicaciones (50 %) | Semáforo **Rojo** por técnicas debajo del 60 % | Por automatizar (10.3) |
-| CP-INT-05 | Integración | Capturar M-01 con un valor fuera de rango y luego abrir el reporte | M-01 = 105 % | La captura se rechaza con «Fuera de rango: un porcentaje va de 0 a 100.» y el reporte cuenta M-01 como medición faltante | Por automatizar (10.3) |
-| CP-INT-06 | Integración | Capturar las 6 métricas y abrir el reporte; corregir M-01 en el mismo corte y volver a abrirlo | M-01 = 60 y M-04 = 85 (no cumplen); después M-01 = 75; técnicas al 100 % | Primero 4 de 6 metas y **Amarillo**; después de corregir, 5 de 6 y **Verde**. El valor corregido reemplaza al anterior | Por automatizar (10.3) |
+| CP-INT-01 | Integración | 1. Registrar el periodo. 2. Registrar el proyecto. 3. Agregar un corte. 4. Capturar M-01 a M-06. 5. Asignar «Revisión de pares» por corte. 6. Registrar su aplicación con evidencia. 7. Abrir el reporte | M-01 = 80, M-02 = 97, M-03 = 0, M-04 = 92, M-05 = 100, M-06 = 95; aplicación del 15/10/2026 con enlace a un PR | Cada paso redirige sin errores; el reporte muestra 6 de 6 metas, técnicas al 100 % y semáforo **Verde** | `test_integracion.py` › `test_cp_int_01_flujo_completo_termina_en_verde` |
+| CP-INT-02 | Integración | Igual que CP-INT-01 | M-01 = 60 y M-04 = 85 (no cumplen); las demás cumplen | 4 de 6 metas y semáforo **Amarillo** | `test_integracion.py` › `test_cp_int_02_flujo_con_4_de_6_metas_termina_en_amarillo` |
+| CP-INT-03 | Integración | Igual que CP-INT-01 | M-03 = 1; las demás cumplen | Semáforo **Rojo** por el defecto crítico | `test_integracion.py` › `test_cp_int_03_flujo_con_un_defecto_critico_termina_en_rojo` |
+| CP-INT-04 | Integración | Igual que CP-INT-01, pero con dos cortes (15/09 y 20/10) y una sola aplicación | Técnica por corte: 1 de 2 aplicaciones (50 %) | Semáforo **Rojo** por técnicas debajo del 60 % | `test_integracion.py` › `test_cp_int_04_flujo_con_tecnicas_atrasadas_termina_en_rojo` |
+| CP-INT-05 | Integración | Capturar M-01 con un valor fuera de rango y luego abrir el reporte | M-01 = 105 % | La captura se rechaza con «Fuera de rango: un porcentaje va de 0 a 100.» y el reporte cuenta M-01 como medición faltante | `test_integracion.py` › `test_cp_int_05_valor_fuera_de_rango_no_llega_al_reporte` |
+| CP-INT-06 | Integración | Capturar las 6 métricas y abrir el reporte; corregir M-01 en el mismo corte y volver a abrirlo | M-01 = 60 y M-04 = 85 (no cumplen); después M-01 = 75; técnicas al 100 % | Primero 4 de 6 metas y **Amarillo**; después de corregir, 5 de 6 y **Verde**. El valor corregido reemplaza al anterior | `test_integracion.py` › `test_cp_int_06_corregir_una_medicion_cambia_el_semaforo` |
 
 ## RF-14 — Porcentaje de cumplimiento de técnicas
 
@@ -64,8 +64,8 @@ Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Djang
 | CP-14-02 | Unitaria | Calcular las esperadas | Técnica «Por PR», 8 PRs fusionados al último corte | 8 esperadas | `test_aplicaciones.py` › `test_por_pr_espera_los_prs_fusionados_al_ultimo_corte` |
 | CP-14-03 | Unitaria | Calcular las esperadas | Técnica «Única» | 1 esperada | `test_aplicaciones.py` › `test_unica_espera_una` |
 | CP-14-04 | Unitaria | Calcular el porcentaje del proyecto | 5 técnicas con 14 aplicaciones registradas de 18 esperadas (ejemplo del mockup) | 78 % | `test_aplicaciones.py` › `test_ejemplo_del_mockup_14_de_18_es_78` |
-| CP-14-05 | Unitaria | Calcular el porcentaje | Técnica con 5 aplicaciones de 3 esperadas, junto a otra atrasada | Cuenta como 100 %; el excedente no compensa a la atrasada | `test_aplicaciones.py` › `test_mas_aplicaciones_que_las_esperadas_cuenta_como_100` |
-| CP-14-06 | Unitaria | Calcular el porcentaje | Proyecto sin técnicas o técnica «Por PR» sin PRs | No hay porcentaje (no entra al total) | `test_aplicaciones.py` › `test_sin_esperadas_no_hay_porcentaje`, `test_tecnica_sin_esperadas_no_entra_en_el_total` |
+| CP-14-05 | Unitaria | Calcular el porcentaje | Dos técnicas «Única»: una con 3 aplicaciones (espera 1) y otra sin aplicaciones | La primera cuenta como 100 % y la otra como 0 %; el proyecto queda en 1 de 2 = 50 %, el excedente no compensa | `test_aplicaciones.py` › `test_mas_aplicaciones_que_las_esperadas_cuenta_como_100` |
+| CP-14-06 | Unitaria | Calcular el porcentaje | Proyecto sin técnicas o técnica «Por PR» sin PRs | No hay porcentaje (no entra al total); una frecuencia desconocida no espera aplicaciones | `test_aplicaciones.py` › `test_sin_esperadas_no_hay_porcentaje`, `test_tecnica_sin_esperadas_no_entra_en_el_total`; `test_calculos.py` › `test_cp_14_06_frecuencia_desconocida_no_espera_aplicaciones` |
 | CP-14-07 | Unitaria | Calcular el cumplimiento en un corte anterior | Aplicaciones antes y después de la fecha del corte | Solo cuentan los cortes y las aplicaciones hasta esa fecha | `test_aplicaciones.py` › `test_en_un_corte_solo_cuentan_los_cortes_hasta_esa_fecha`, `test_en_un_corte_solo_cuentan_las_aplicaciones_hasta_esa_fecha` |
 
 ## RF-13 — Registrar la aplicación de una técnica
@@ -181,7 +181,7 @@ Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Djang
 | Requisito | Casos | Automatizados | Por automatizar (10.3) | Pendientes de implementar |
 |---|---|---|---|---|
 | RF-15 | 13 | 13 | 0 | 0 |
-| Flujo completo | 6 | 0 | 6 | 0 |
+| Flujo completo | 6 | 6 | 0 | 0 |
 | RF-14 | 7 | 7 | 0 | 0 |
 | RF-13 | 4 | 4 | 0 | 0 |
 | RF-12 | 3 | 3 | 0 | 0 |
@@ -193,4 +193,4 @@ Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Djang
 | RF-06 | 4 | 4 | 0 | 0 |
 | RF-05 | 4 | 4 | 0 | 0 |
 | RF-20 | 5 | 0 | 0 | 5 |
-| **Total** | **64** | **48** | **6** | **10** |
+| **Total** | **64** | **54** | **0** | **10** |
