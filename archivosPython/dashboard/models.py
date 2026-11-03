@@ -6,12 +6,21 @@ from django.db.models.functions import Lower
 
 
 class Usuario(models.Model):
+
+    PERFIL_CHOICES = [
+        ('administrador', 'Administrador'),
+        ('miembro', 'Miembro'),
+    ]
+
     id_usuario = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=150, verbose_name="Nombre")
-    perfil = models.CharField(max_length=100, verbose_name="Perfil")
+    perfil = models.CharField(max_length=100, verbose_name="Perfil", choices=PERFIL_CHOICES, default='miembro')
 
     def __str__(self):
         return self.nombre
+
+    def get_perfil(self):
+        return self.perfil
 
 
 class Periodo(models.Model):
