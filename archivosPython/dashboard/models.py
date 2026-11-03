@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 # Create your models here.
@@ -225,14 +226,53 @@ class Metrica(models.Model):
         return valor >= self.meta
 
 
+class Corte(models.Model):
+    """RF-08: fecha de corte de un proyecto; en cada corte se captura una medición por métrica.
+
+    El glosario de la SRS define el corte como una fecha (observación (b) de la bitácora #2).
+    """
+
+    proyecto = models.ForeignKey(
+        Proyecto, on_delete=models.CASCADE, related_name="cortes", verbose_name="Proyecto"
+    )
+    fecha = models.DateField(verbose_name="Fecha de corte")
+
+    class Meta:
+        ordering = ["fecha"]
+        constraints = [
+            models.UniqueConstraint(fields=["proyecto", "fecha"], name="corte_unico_por_fecha"),
+        ]
+
+    def __str__(self):
+        return self.fecha.strftime("%d/%m/%Y")
+
+
 class MetricaProyecto(models.Model):
-    # Relación 'Métrica_Proyecto' con atributos adicionales 'Valor' y 'Corte'
+    # Relación 'Métrica_Proyecto' con atributos adicionales 'Valor' y 'Corte' (RF-08: medición)
     #pk = models.CompositePrimaryKey("id_metrica", "id_periodo", "id_proyecto")
 
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
     metrica = models.ForeignKey(Metrica, on_delete=models.CASCADE)
     valor = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor")
-    corte = models.CharField(max_length=50, verbose_name="Corte")
+    corte = models.ForeignKey(
+        Corte, on_delete=models.CASCADE, related_name="mediciones", verbose_name="Corte"
+    )
+    # Columna «Capturó» del mockup de Mediciones.
+    capturado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="mediciones_capturadas",
+        verbose_name="Capturó",
+    )
+    capturado_en = models.DateTimeField(auto_now=True, verbose_name="Fecha de captura")
+
+    @property
+    def valor_texto(self):
+        """Valor como en el mockup: «58 %», «2»."""
+        valor = f"{self.valor.normalize():f}"
+        return f"{valor} %" if self.metrica.unidad == Metrica.Unidad.PORCENTAJE else valor
 
     class Meta:
         verbose_name = "Métrica de Proyecto"

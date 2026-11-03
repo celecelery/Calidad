@@ -297,7 +297,7 @@ class AsignacionMetricasTests(MetricasBaseVistaTest):
         respuesta = self.client.get(reverse("metricas_proyecto", args=[proyecto.pk]))
         self.assertEqual(respuesta.status_code, 200)
         self.assertEqual([m.clave for m in respuesta.context["metricas"]], CLAVES_BASE)
-        opciones = respuesta.context["formulario"].fields["metrica"].queryset
+        opciones = respuesta.context["form_asignar"].fields["metrica"].queryset
         self.assertEqual(list(opciones), [extra])
         self.assertContains(respuesta, "6 métricas asignadas")
 

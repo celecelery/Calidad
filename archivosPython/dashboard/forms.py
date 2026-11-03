@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Metrica, Periodo, Proyecto
+from .models import Corte, Metrica, Periodo, Proyecto
 
 MENSAJE_OBLIGATORIO = "Este campo es obligatorio."
 
@@ -224,3 +224,102 @@ class AsignarMetricaForm(forms.Form):
     def __init__(self, *args, proyecto, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["metrica"].queryset = Metrica.objects.exclude(proyectos=proyecto)
+
+
+def etiquetas_de_cortes(proyecto):
+    """«Corte n — dd/mm/aaaa»: los cortes se numeran por fecha dentro de cada proyecto."""
+    return {corte.pk: f"Corte {n} — {corte}" for n, corte in enumerate(proyecto.cortes.all(), 1)}
+
+
+class CorteForm(forms.ModelForm):
+    """RF-08: agregar un corte (fecha) al proyecto; debe caer dentro de su periodo."""
+
+    class Meta:
+        model = Corte
+        fields = ["fecha"]
+        labels = {"fecha": "Fecha del corte"}
+        widgets = {
+            "fecha": forms.DateInput(attrs={"class": "input", "type": "date"}, format="%Y-%m-%d"),
+        }
+        error_messages = {
+            "fecha": {"required": MENSAJE_OBLIGATORIO, "invalid": "Escribe una fecha válida."},
+        }
+
+    def __init__(self, *args, proyecto, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.proyecto = proyecto
+        self.instance.proyecto = proyecto
+
+    def clean_fecha(self):
+        fecha = self.cleaned_data["fecha"]
+        periodo = self.proyecto.periodo
+        if not periodo.fecha_inicio <= fecha <= periodo.fecha_fin:
+            raise forms.ValidationError(
+                f"El corte debe caer dentro del periodo {periodo.nombre} "
+                f"({periodo.fecha_inicio:%d/%m/%Y} – {periodo.fecha_fin:%d/%m/%Y})."
+            )
+        if self.proyecto.cortes.filter(fecha=fecha).exists():
+            raise forms.ValidationError("El proyecto ya tiene un corte en esa fecha.")
+        return fecha
+
+
+class MedicionForm(forms.Form):
+    """RF-08: capturar el valor de una métrica en un corte. Se valida en el servidor (RNF-04)."""
+
+    corte = forms.ModelChoiceField(
+        queryset=Corte.objects.none(),
+        label="Corte",
+        empty_label="Selecciona un corte",
+        widget=forms.Select(attrs={"class": "input"}),
+        error_messages={
+            "required": "Selecciona un corte. Si no hay, agrega uno con «+».",
+            "invalid_choice": "Selecciona un corte de este proyecto.",
+        },
+    )
+    metrica = forms.ModelChoiceField(
+        queryset=Metrica.objects.none(),
+        label="Métrica",
+        empty_label="Selecciona una métrica",
+        widget=forms.Select(attrs={"class": "input"}),
+        error_messages={
+            "required": "Selecciona una métrica.",
+            "invalid_choice": "Selecciona una métrica asignada a este proyecto.",
+        },
+    )
+    valor = forms.DecimalField(
+        label="Valor",
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.TextInput(attrs={"class": "input", "inputmode": "decimal"}),
+        error_messages={
+            "required": MENSAJE_OBLIGATORIO,
+            "invalid": "Escribe un número.",
+            "max_digits": "El valor es demasiado grande.",
+            "max_decimal_places": "Usa como máximo 2 decimales.",
+            "max_whole_digits": "El valor es demasiado grande.",
+        },
+    )
+
+    def __init__(self, *args, proyecto, **kwargs):
+        # Ids propios: la misma página tiene el formulario de asignar, que también usa «metrica».
+        kwargs.setdefault("auto_id", "med_%s")
+        super().__init__(*args, **kwargs)
+        etiquetas = etiquetas_de_cortes(proyecto)
+        self.fields["corte"].queryset = proyecto.cortes.all()
+        self.fields["corte"].label_from_instance = lambda corte: etiquetas[corte.pk]
+        self.fields["metrica"].queryset = proyecto.metricas.all()
+
+    def clean(self):
+        datos = super().clean()
+        metrica = datos.get("metrica")
+        valor = datos.get("valor")
+        if metrica is None or valor is None:
+            return datos
+        if metrica.unidad == Metrica.Unidad.PORCENTAJE and not 0 <= valor <= 100:
+            self.add_error("valor", "Fuera de rango: un porcentaje va de 0 a 100.")
+        elif metrica.unidad == Metrica.Unidad.CONTEO:
+            if valor < 0:
+                self.add_error("valor", "Fuera de rango: un conteo no puede ser negativo.")
+            elif valor != valor.to_integral_value():
+                self.add_error("valor", "Un conteo es un número entero.")
+        return datos

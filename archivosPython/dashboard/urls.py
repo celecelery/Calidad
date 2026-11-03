@@ -9,6 +9,8 @@ urlpatterns = [
     path("proyectos/", views.lista_proyectos, name="lista_proyectos"),
     path("proyectos/<int:pk>/editar/", views.editar_proyecto, name="editar_proyecto"),
     path("proyectos/<int:pk>/metricas/", views.metricas_proyecto, name="metricas_proyecto"),
+    path("proyectos/<int:pk>/mediciones/", views.capturar_medicion, name="capturar_medicion"),
+    path("proyectos/<int:pk>/cortes/", views.agregar_corte, name="agregar_corte"),
     path(
         "proyectos/<int:pk>/metricas/<int:metrica_pk>/quitar/",
         views.quitar_metrica,
