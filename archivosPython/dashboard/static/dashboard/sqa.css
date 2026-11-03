@@ -197,3 +197,11 @@ details.plegable:not([open]) > summary { border-bottom: none; }
 .semaforo-r { color: var(--rojo); }
 .semaforo-y { color: var(--neutro-tx); }
 .semaforo-g { color: var(--bueno-tx); }
+
+/* RF-19: pantalla de inicio de sesión (mockup «Iniciar sesión») */
+.login { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 48px 16px; }
+.login-card { width: 100%; max-width: 400px; border-top: 5px solid var(--verde); padding: 32px 30px 22px; display: flex; flex-direction: column; gap: 16px; }
+.login-card .sub { margin: -10px 0 4px; color: var(--gris-txt); font-size: 13px; }
+.login-card .alert { margin-bottom: 0; }
+.login-card .btn { width: 100%; margin-top: 4px; }
+.login-ayuda { margin: 0; text-align: center; }
