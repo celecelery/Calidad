@@ -1,33 +1,22 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Editar proyecto</title>
-</head>
-<body>
-    {% include "dashboard/_menu.html" %}
+{% extends "dashboard/base.html" %}
 
-    <h1>Editar proyecto</h1>
+{% block titulo %}Editar proyecto{% endblock %}
 
-    {% if formulario.non_field_errors %}
-        <div class="errores">{{ formulario.non_field_errors }}</div>
-    {% endif %}
+{% block contenido %}
+{% include "dashboard/_pestanas_proyecto.html" with activa="datos" %}
 
-    {# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
-    <form method="post" novalidate>
-        {% csrf_token %}
-        {% for campo in formulario %}
-            <p>
-                <label for="{{ campo.id_for_label }}">{{ campo.label }}</label>
-                {{ campo }}
-                {% for error in campo.errors %}
-                    <span class="error">{{ error }}</span>
-                {% endfor %}
-            </p>
-        {% endfor %}
-        <button type="submit">Guardar cambios</button>
-        <a href="{% url 'lista_proyectos' %}">Cancelar</a>
-    </form>
-</body>
-</html>
+{# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
+<form class="card" method="post" novalidate>
+    {% csrf_token %}
+    <div class="card-h"><h2>Datos del proyecto</h2><span class="help">Los campos con <span class="req">*</span> son obligatorios.</span></div>
+    <div class="card-b">
+        {% include "dashboard/_campos_formulario.html" %}
+        <div class="form-foot">
+            <a class="btn" href="{% url 'lista_proyectos' %}">Cancelar</a>
+            <button class="btn primary" type="submit">Guardar cambios</button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block estado %}Modo edición{% endblock %}

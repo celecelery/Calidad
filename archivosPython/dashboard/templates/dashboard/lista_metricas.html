@@ -1,0 +1,91 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Catálogo de métricas{% endblock %}
+
+{% block contenido %}
+{# RF-06, según el mockup «Catálogo de métricas»: la tabla y, al lado, el formulario #}
+<div class="page-head">
+    <div>
+        <div class="crumbs">Catálogos / Métricas</div>
+        <h1>Catálogo de métricas</h1>
+        <div class="sub">Las 6 métricas base se asignan a cada proyecto nuevo.</div>
+    </div>
+    <div class="actions"><a class="btn primary" href="{% url 'metrica_nueva' %}">+ Nueva métrica</a></div>
+</div>
+
+<div class="split">
+    <div class="stack">
+        <div class="table-wrap">
+            <table class="sheet">
+                <thead>
+                    <tr><th class="rn"></th><th>ID</th><th>Métrica</th><th>Tipo</th><th class="c">Unidad</th><th class="num">Meta</th><th>Fuente</th></tr>
+                </thead>
+                <tbody>
+                    {% for fila in metricas %}
+                        <tr{% if fila.pk == metrica.pk %} class="sel"{% endif %}>
+                            <td class="rn">{{ forloop.counter }}</td>
+                            <td class="nw">{{ fila.clave|default:"—" }}</td>
+                            <td{% if fila.pk == metrica.pk %} class="sel"{% endif %}>
+                                <a class="celda" href="{% url 'editar_metrica' fila.pk %}"><b>{{ fila.nombre }}</b></a>
+                            </td>
+                            <td>{{ fila.tipo }}</td>
+                            <td class="c">{{ fila.unidad }}</td>
+                            <td class="num">{{ fila.meta_corta }}</td>
+                            <td>{{ fila.fuente|default:"—" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="7">Todavía no hay métricas en el catálogo.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="fx" aria-label="Fórmula de la métrica seleccionada">
+            <span class="fx-l">fx</span>
+            <span class="fx-v">{% if metrica %}{{ metrica.clave|default:metrica.nombre }} = {{ metrica.formula }}{% else %}Selecciona una métrica para ver su fórmula.{% endif %}</span>
+        </div>
+        <div class="alert info"><div><b>Sentido de la meta.</b> M-03 se cumple con un valor igual o menor a la meta; las demás, con un valor igual o mayor.</div></div>
+    </div>
+
+    {# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
+    <form class="card" method="post" novalidate>
+        {% csrf_token %}
+        <div class="card-h">
+            <h2>{% if metrica %}Editar {{ metrica.clave|default:metrica.nombre }}{% else %}Nueva métrica{% endif %}</h2>
+            {% if metrica.es_base %}<span class="pill gray">Base</span>{% endif %}
+        </div>
+        <div class="card-b stack" style="gap: 14px;">
+            {% if formulario.non_field_errors %}<div class="alert bad">{{ formulario.non_field_errors }}</div>{% endif %}
+
+            {% for campo in formulario %}
+                {% if campo.name == "unidad" %}
+                    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+                    {% include "dashboard/_campo.html" %}
+                {% elif campo.name == "meta" %}
+                    {% include "dashboard/_campo.html" %}
+                    </div>
+                {% elif campo.name == "sentido" %}
+                    <fieldset style="border: 0; margin: 0; padding: 0;">
+                        <legend class="lbl" style="margin-bottom: 4px;">{{ campo.label }} <span class="req">*</span></legend>
+                        <div class="radios">
+                            {% for opcion in campo %}
+                                <label class="radio" for="{{ opcion.id_for_label }}">{{ opcion.tag }}{{ opcion.choice_label }}</label>
+                            {% endfor %}
+                        </div>
+                        {% for error in campo.errors %}<span class="err-msg">{{ error }}</span>{% endfor %}
+                    </fieldset>
+                {% else %}
+                    {% include "dashboard/_campo.html" %}
+                {% endif %}
+            {% endfor %}
+
+            <div class="form-foot">
+                <a class="btn" href="{% url 'lista_metricas' %}">Cancelar</a>
+                <button class="btn primary" type="submit">Guardar</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block estado %}{% if metrica %}Celda seleccionada: {{ metrica.clave|default:metrica.nombre }}{% elif formulario.errors %}{{ formulario.errors|length }} error{{ formulario.errors|length|pluralize:"es" }} en el formulario{% else %}Listo{% endif %}{% endblock %}
+{% block estado_derecha %}{{ metricas|length }} métrica{{ metricas|length|pluralize }} en el catálogo{% endblock %}
