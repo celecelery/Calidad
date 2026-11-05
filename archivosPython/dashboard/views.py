@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
-from .models import ReporteSalud, Usuario
 
 from . import plotly_app  # noqa: F401  (registra la aplicación Dash)
 from .cumplimiento import cumplimiento_de_tecnicas
@@ -21,7 +20,15 @@ from .forms import (
     TecnicaSQAForm,
     etiquetas_de_cortes,
 )
-from .models import AsignacionTecnica, Metrica, MetricaProyecto, Proyecto, TecnicaSQA, Usuario
+from .models import (
+    AsignacionTecnica,
+    Metrica,
+    MetricaProyecto,
+    Proyecto,
+    ReporteSalud,
+    TecnicaSQA,
+    Usuario,
+)
 from .salud import reporte_de_salud
 
 
