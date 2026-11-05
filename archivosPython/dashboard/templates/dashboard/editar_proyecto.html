@@ -5,18 +5,58 @@
 {% block contenido %}
 {% include "dashboard/_pestanas_proyecto.html" with activa="datos" %}
 
-{# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
-<form class="card" method="post" novalidate>
-    {% csrf_token %}
-    <div class="card-h"><h2>Datos del proyecto</h2><span class="help">Los campos con <span class="req">*</span> son obligatorios.</span></div>
-    <div class="card-b">
-        {% include "dashboard/_campos_formulario.html" %}
-        <div class="form-foot">
-            <a class="btn" href="{% url 'lista_proyectos' %}">Cancelar</a>
-            <button class="btn primary" type="submit">Guardar cambios</button>
+<div class="split">
+    {# novalidate: la validación la hace el servidor (RNF-04), no solo el navegador #}
+    <form class="card" method="post" novalidate>
+        {% csrf_token %}
+        <div class="card-h"><h2>Datos del proyecto</h2><span class="help">Los campos con <span class="req">*</span> son obligatorios.</span></div>
+        <div class="card-b">
+            {% include "dashboard/_campos_formulario.html" %}
+            <div class="form-foot">
+                <a class="btn" href="{% url 'lista_proyectos' %}">Cancelar</a>
+                <button class="btn primary" type="submit">Guardar cambios</button>
+            </div>
         </div>
+    </form>
+
+    <div class="stack">
+        <div class="card">
+            <div class="card-h"><h2>Resumen</h2></div>
+            <div class="card-b">
+                <table class="resumen" style="width: 100%; border-collapse: collapse;">
+                    <tr><td class="muted">Estado</td><td style="text-align: right;"><span class="pill gray">{{ proyecto.estado }}</span></td></tr>
+                    <tr><td class="muted">Cortes capturados</td><td style="text-align: right;"><b>{{ resumen.cortes }}</b></td></tr>
+                    <tr><td class="muted">Métricas asignadas</td><td style="text-align: right;"><b>{{ resumen.metricas }}</b></td></tr>
+                    <tr><td class="muted">Técnicas asignadas</td><td style="text-align: right;"><b>{{ resumen.tecnicas }}</b></td></tr>
+                </table>
+            </div>
+        </div>
+
+        {# RF-05: archivar sin borrar (mockup «Datos del proyecto») #}
+        {% if proyecto.archivado %}
+            <form class="card" method="post" action="{% url 'reactivar_proyecto' proyecto.pk %}">
+                {% csrf_token %}
+                <div class="card-h"><h2>Proyecto archivado</h2></div>
+                <div class="card-b">
+                    <p style="margin-top: 0;">No aparece en el dashboard ni en el menú lateral, pero conserva sus mediciones, técnicas y reportes.</p>
+                    <button class="btn" type="submit" style="width: 100%;">Reactivar proyecto</button>
+                </div>
+            </form>
+        {% else %}
+            <form class="card" method="post" action="{% url 'archivar_proyecto' proyecto.pk %}"
+                  style="border-color: var(--malo-bg);"
+                  onsubmit="return confirm('¿Archivar «{{ proyecto.nombre|escapejs }}»? Dejará de aparecer en el dashboard; no se borra nada.');">
+                {% csrf_token %}
+                <div class="card-h"><h2>Archivar proyecto</h2></div>
+                <div class="card-b">
+                    <p style="margin-top: 0;">El proyecto deja de aparecer en el dashboard, pero <b>no se borra</b>: sus mediciones, técnicas y reportes quedan en el historial.</p>
+                    <p class="muted">Puedes reactivarlo después desde la lista de proyectos.</p>
+                    <button class="btn danger" type="submit" style="width: 100%;">Archivar proyecto</button>
+                </div>
+            </form>
+        {% endif %}
     </div>
-</form>
+</div>
 {% endblock %}
 
 {% block estado %}Modo edición{% endblock %}

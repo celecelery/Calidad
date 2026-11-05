@@ -1,0 +1,134 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Reporte de salud — {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+{% include "dashboard/_pestanas_proyecto.html" with activa="reporte" %}
+
+{# RF-15, según el mockup «Reporte de salud» #}
+<form class="card" method="get" action="{% url 'reporte_salud' proyecto.pk %}" style="margin-bottom: 18px;">
+    <div class="card-b" style="display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;">
+        {% if reporte %}
+            <div class="field" style="flex: 1 1 260px;">
+                <label for="{{ selector.corte.id_for_label }}">{{ selector.corte.label }}</label>
+                {{ selector.corte }}
+            </div>
+            <button class="btn primary" type="submit">Ver reporte</button>
+        {% endif %}
+        <div class="actions" style="margin-left: auto;">
+            {# RF-16, RF-17 y RF-18 llegan en el sprint 3 #}
+            <button class="btn" type="button" disabled title="Próximamente (RF-18)" style="opacity: .55; cursor: not-allowed;">Guardar en historial</button>
+            <button class="btn" type="button" disabled title="Próximamente (RF-17)" style="opacity: .55; cursor: not-allowed;">Exportar PDF</button>
+        </div>
+    </div>
+</form>
+
+{% if not reporte %}
+    <div class="alert warn">El proyecto todavía no tiene cortes. <a href="{% url 'metricas_proyecto' proyecto.pk %}">Agrega un corte y captura sus mediciones</a> para generar el reporte de salud.</div>
+{% else %}
+    <div class="kpis" style="grid-template-columns: minmax(280px, 2fr) repeat(3, minmax(160px, 1fr));">
+        <div class="kpi" style="display: flex; gap: 16px; align-items: center;">
+            <div class="semaforo" role="img" aria-label="Semáforo {{ reporte.semaforo }}">
+                <span class="luz r{% if reporte.clase == 'r' %} on{% endif %}"></span>
+                <span class="luz y{% if reporte.clase == 'y' %} on{% endif %}"></span>
+                <span class="luz g{% if reporte.clase == 'g' %} on{% endif %}"></span>
+            </div>
+            <div>
+                <div class="k">Semáforo general · Corte {{ reporte.numero_corte }}</div>
+                <div class="v semaforo-{{ reporte.clase }}">{{ reporte.semaforo|upper }}</div>
+                <div style="font-size: 13px;">{{ reporte.motivo }}</div>
+            </div>
+        </div>
+        <div class="kpi">
+            <div class="k">Metas cumplidas</div>
+            <div class="v">{{ reporte.metas_cumplidas }} / {{ reporte.metas_total }}</div>
+            <div class="h">{% if reporte.porcentaje_metas is not None %}{{ reporte.porcentaje_metas|floatformat:0 }} %{% endif %}{% if reporte.sin_medicion %} · {{ reporte.sin_medicion }} sin medición{% endif %}</div>
+        </div>
+        <div class="kpi">
+            <div class="k">Defectos críticos</div>
+            <div class="v">{% if reporte.defectos_criticos is not None %}{{ reporte.defectos_criticos|floatformat:0 }}{% else %}—{% endif %}</div>
+            <div class="h">{% if reporte.defectos_criticos is None %}M-03 sin medición en este corte{% else %}M-03 · issues críticos abiertos{% endif %}</div>
+        </div>
+        <div class="kpi">
+            <div class="k">Técnicas SQA</div>
+            <div class="v">{% if reporte.porcentaje_tecnicas is not None %}{{ reporte.porcentaje_tecnicas|floatformat:0 }} %{% else %}—{% endif %}</div>
+            <div class="h">{{ reporte.tecnicas.registradas }} de {{ reporte.tecnicas.esperadas }} aplicaciones</div>
+        </div>
+    </div>
+
+    {% if reporte.sin_medicion %}
+        <div class="alert warn">{% if reporte.sin_medicion == 1 %}Falta 1 medición en este corte; cuenta como meta no cumplida.{% else %}Faltan {{ reporte.sin_medicion }} mediciones en este corte; cuentan como metas no cumplidas.{% endif %} <a href="{% url 'metricas_proyecto' proyecto.pk %}">Capturar mediciones</a></div>
+    {% endif %}
+
+    <div class="page-head" style="margin-bottom: 10px;"><h2>Métricas contra meta</h2></div>
+    <div class="table-wrap" style="margin-bottom: 18px;">
+        <table class="sheet">
+            <thead>
+                <tr><th class="rn"></th><th>ID</th><th>Métrica</th><th>Tipo</th><th class="num">Corte {{ reporte.numero_corte }}</th><th class="num">Meta</th><th class="c">Cumple</th></tr>
+            </thead>
+            <tbody>
+                {% for fila in reporte.filas %}
+                    <tr>
+                        <td class="rn">{{ forloop.counter }}</td>
+                        <td>{{ fila.metrica.clave }}</td>
+                        <td>{{ fila.metrica.nombre }}</td>
+                        <td>{{ fila.metrica.tipo }}</td>
+                        <td class="num">{% if fila.medicion %}<b>{{ fila.medicion.valor_texto }}</b>{% else %}<span class="muted">Sin medición</span>{% endif %}</td>
+                        <td class="num">{{ fila.metrica.meta_texto }}</td>
+                        <td class="c {% if fila.cumple %}good{% else %}bad{% endif %}">{% if fila.cumple %}Sí{% else %}No{% endif %}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td class="rn"></td><td colspan="6" class="muted">El proyecto no tiene métricas asignadas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="page-head" style="margin-bottom: 10px;">
+        <h2>Cumplimiento de técnicas SQA</h2>
+        <a href="{% url 'tecnicas_proyecto' proyecto.pk %}">Ver asignaciones</a>
+    </div>
+    <div class="table-wrap">
+        <table class="sheet">
+            <thead>
+                <tr><th class="rn"></th><th>Técnica</th><th>Responsable</th><th>Frecuencia</th><th class="num">Esperadas</th><th class="num">Registradas</th><th class="num">Cumplimiento</th><th>Evidencia</th></tr>
+            </thead>
+            <tbody>
+                {% for fila in reporte.tecnicas.tecnicas %}
+                    <tr>
+                        <td class="rn">{{ forloop.counter }}</td>
+                        <td>{{ fila.asignacion.tecnica.nombre }}</td>
+                        <td>{{ fila.asignacion.usuario }}</td>
+                        <td>{{ fila.asignacion.frecuencia }}</td>
+                        <td class="num">{{ fila.esperadas }}</td>
+                        <td class="num">{{ fila.registradas }}</td>
+                        <td class="num {{ fila.clase }}">{% if fila.porcentaje is not None %}{{ fila.porcentaje|floatformat:0 }} %{% else %}—{% endif %}</td>
+                        <td>
+                            {% for aplicacion in fila.aplicaciones %}
+                                <a href="{{ aplicacion.evidencia }}" target="_blank" rel="noopener noreferrer" title="{{ aplicacion.fecha|date:'d/m/Y' }} · {{ aplicacion.resultado }}">{{ aplicacion.fecha|date:"d/m" }}</a>{% if not forloop.last %}, {% endif %}
+                            {% empty %}
+                                <span class="muted">Sin evidencia</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td class="rn"></td><td colspan="7" class="muted">El proyecto no tiene técnicas asignadas.</td></tr>
+                {% endfor %}
+                {% if reporte.tecnicas.tecnicas %}
+                    <tr class="total">
+                        <td class="rn"></td><td>Total del proyecto</td><td></td><td></td>
+                        <td class="num">{{ reporte.tecnicas.esperadas }}</td>
+                        <td class="num">{{ reporte.tecnicas.registradas }}</td>
+                        <td class="num">{% if reporte.porcentaje_tecnicas is not None %}{{ reporte.porcentaje_tecnicas|floatformat:0 }} %{% else %}—{% endif %}</td>
+                        <td></td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <p class="help" style="margin: 10px 0 0;">Cada enlace de evidencia es una aplicación registrada hasta la fecha del corte.</p>
+{% endif %}
+{% endblock %}
+
+{% block estado %}{% if reporte %}Reporte del {{ reporte.corte.fecha|date:"d/m/Y" }} · Corte {{ reporte.numero_corte }}{% else %}Sin cortes todavía{% endif %}{% endblock %}
+{% block estado_derecha %}Regla del semáforo: Rojo → Amarillo → Verde, la más estricta que aplique{% endblock %}

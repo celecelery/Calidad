@@ -9,6 +9,9 @@ VISTAS_DE_PROYECTO = {
     "capturar_medicion",
     "agregar_corte",
     "tecnicas_proyecto",
+    "guardar_prs_fusionados",
+    "registrar_aplicacion",
+    "reporte_salud",
 }
 
 

@@ -165,6 +165,10 @@ class MetricasBaseVistaTest(TestCase):
         cls.usuario = get_user_model().objects.create_user(
             username="celeste", password="clave-segura-123"
         )
+        # Perfil de administrador ligado al usuario que inicia sesión en las pruebas.
+        cls.admin = Usuario.objects.create(
+            nombre="Admin de pruebas", perfil="administrador", user=cls.usuario
+        )
         cls.lider = Usuario.objects.create(nombre="Ana", perfil="Miembro")
         cls.periodo = Periodo.objects.create(
             nombre="Ago-Dic 2026", fecha_inicio=date(2026, 8, 10), fecha_fin=date(2026, 12, 15)
@@ -306,8 +310,8 @@ class AsignacionMetricasTests(MetricasBaseVistaTest):
         respuesta = self.client.get(reverse("metricas_proyecto", args=[proyecto.pk]))
         self.assertContains(respuesta, f'href="{reverse("editar_proyecto", args=[proyecto.pk])}"')
         self.assertContains(respuesta, 'class="tab on"', count=1)
-        # Evolución, Reporte e Historial siguen pendientes; Técnicas SQA ya existe (RF-12).
-        self.assertContains(respuesta, 'class="tab off"', count=3)
+        # Evolución (RF-09) e Historial (RF-18) siguen pendientes.
+        self.assertContains(respuesta, 'class="tab off"', count=2)
 
     def test_post_asigna_una_metrica(self):
         proyecto = self.crear_proyecto()

@@ -5,28 +5,32 @@ from django.views.decorators.http import require_POST
 from .models import ReporteSalud, Usuario
 
 from . import plotly_app  # noqa: F401  (registra la aplicación Dash)
+from .cumplimiento import cumplimiento_de_tecnicas
 from .forms import (
+    AplicacionTecnicaForm,
     AsignacionTecnicaForm,
     AsignarMetricaForm,
     CorteForm,
+    CorteReporteForm,
     FiltroProyectosForm,
     MedicionForm,
     MetricaForm,
     PeriodoForm,
     ProyectoForm,
+    PrsFusionadosForm,
     TecnicaSQAForm,
     etiquetas_de_cortes,
 )
-from .models import Metrica, MetricaProyecto, Proyecto, TecnicaSQA
+from .models import AsignacionTecnica, Metrica, MetricaProyecto, Proyecto, TecnicaSQA, Usuario
+from .salud import reporte_de_salud
+
 
 def obtener_perfil_usuario(request):
-    if(request.user.is_superuser):
-        print("valid access")
-        return 'administrador'
-    else:
-        return 'miembro'
-    #usuario = Usuario.objects.get(nombre=request.user.username)
-    #return usuario.get_perfil()
+    if not request.user.is_authenticated:
+        return None
+    usuario = Usuario.objects.filter(user=request.user).first()
+    return usuario.perfil if usuario else None
+
 
 def periodo_view(request):
     """RF-01: formulario para registrar un periodo."""
@@ -40,6 +44,7 @@ def periodo_view(request):
         formulario = PeriodoForm()
 
     return render(request, "dashboard/formulario_periodo.html", {"formulario": formulario})
+
 
 def proyecto_view(request):
     """RF-02: formulario para registrar un proyecto."""
@@ -85,8 +90,9 @@ def lista_proyectos(request):
 def editar_proyecto(request, pk):
     """RF-03: editar los datos de un proyecto; solo se modifica ese proyecto."""
     proyecto = get_object_or_404(Proyecto.objects.select_related("periodo", "lider"), pk=pk)
-    if not obtener_perfil_usuario(request) == 'administrador':
-        redirect("lista_proyectos")
+    if obtener_perfil_usuario(request) != "administrador":
+        messages.error(request, "Solo un administrador puede editar proyectos.")
+        return redirect("lista_proyectos")
     if request.method == "POST":
         formulario = ProyectoForm(request.POST, instance=proyecto)
         if formulario.is_valid():
@@ -98,8 +104,45 @@ def editar_proyecto(request, pk):
     return render(
         request,
         "dashboard/editar_proyecto.html",
-        {"formulario": formulario, "proyecto": proyecto},
+        {
+            "formulario": formulario,
+            "proyecto": proyecto,
+            # Tarjeta «Resumen» del mockup de Datos.
+            "resumen": {
+                "cortes": proyecto.cortes.count(),
+                "metricas": proyecto.metricas.count(),
+                "tecnicas": proyecto.asignaciones_tecnicas.count(),
+            },
+        },
     )
+
+
+@require_POST
+def archivar_proyecto(request, pk):
+    """RF-05: archivar un proyecto sin borrarlo; sale del dashboard y del menú lateral."""
+    proyecto = get_object_or_404(Proyecto, pk=pk)
+    if proyecto.archivado:
+        messages.info(request, f"El proyecto «{proyecto.nombre}» ya estaba archivado.")
+    else:
+        proyecto.archivar()
+        messages.success(
+            request,
+            f"Proyecto «{proyecto.nombre}» archivado. Sus mediciones, técnicas y reportes "
+            "se conservan.",
+        )
+    return redirect("lista_proyectos")
+
+
+@require_POST
+def reactivar_proyecto(request, pk):
+    """RF-05: reactivar un proyecto archivado (vuelve al dashboard y al menú lateral)."""
+    proyecto = get_object_or_404(Proyecto, pk=pk)
+    if not proyecto.archivado:
+        messages.info(request, f"El proyecto «{proyecto.nombre}» ya estaba activo.")
+    else:
+        proyecto.reactivar()
+        messages.success(request, f"Proyecto «{proyecto.nombre}» reactivado.")
+    return redirect("lista_proyectos")
 
 
 def metricas_view(request, pk=None):
@@ -254,8 +297,9 @@ def agregar_corte(request, pk):
 @require_POST
 def quitar_metrica(request, pk, metrica_pk):
     """RF-07: quitar una métrica de un proyecto; no la borra del catálogo ni de otros proyectos."""
-    if not obtener_perfil_usuario(request) == 'administrador':
-        redirect("metricas_view")
+    if obtener_perfil_usuario(request) != "administrador":
+        messages.error(request, "Solo un administrador puede quitar métricas.")
+        return redirect("metricas_proyecto", pk=pk)
     proyecto = get_object_or_404(Proyecto, pk=pk)
     metrica = get_object_or_404(proyecto.metricas, pk=metrica_pk)
     proyecto.metricas.remove(metrica)
@@ -306,8 +350,9 @@ def tecnica_nueva(request):
 def editar_tecnica(request, pk):
     """RF-11: editar la descripción o la referencia de una técnica del catálogo."""
     tecnica = get_object_or_404(TecnicaSQA, pk=pk)
-    if not obtener_perfil_usuario(request) == 'administrador':
-        redirect("lista_tecnicas")
+    if obtener_perfil_usuario(request) != "administrador":
+        messages.error(request, "Solo un administrador puede editar técnicas.")
+        return redirect("lista_tecnicas")
     if request.method == "POST":
         formulario = TecnicaSQAForm(request.POST, instance=tecnica)
         if formulario.is_valid():
@@ -319,9 +364,42 @@ def editar_tecnica(request, pk):
     return _catalogo_tecnicas(request, formulario, tecnica)
 
 
+def _pagina_tecnicas(request, proyecto, formulario=None, form_prs=None):
+    """Pestaña Técnicas SQA (mockup «Técnicas del proyecto»): asignar (RF-12) y cumplimiento
+    (RF-14). Cada vista que recibe un POST le pasa su formulario con errores."""
+    cumplimiento = cumplimiento_de_tecnicas(proyecto)
+    asignaciones = []
+    for fila in cumplimiento.tecnicas:
+        fila.asignacion.registradas = fila.registradas
+        asignaciones.append(fila.asignacion)
+    cortes = list(proyecto.cortes.all())
+    hay_por_pr = any(
+        t.asignacion.frecuencia == AsignacionTecnica.Frecuencia.POR_PR
+        for t in cumplimiento.tecnicas
+    )
+    return render(
+        request,
+        "dashboard/tecnicas_proyecto.html",
+        {
+            "proyecto": proyecto,
+            "cumplimiento": cumplimiento,
+            # `asignaciones` (con `registradas`) y `aplicaciones` se conservan como en RF-12.
+            "asignaciones": asignaciones,
+            "aplicaciones": cumplimiento.registradas,
+            "formulario": formulario or AsignacionTecnicaForm(proyecto=proyecto),
+            "total_catalogo": TecnicaSQA.objects.count(),
+            "cortes": cortes,
+            "ultimo": cortes[-1] if cortes else None,
+            "mostrar_prs": hay_por_pr and cortes,
+            "abrir_prs": form_prs is not None,
+            "form_prs": form_prs or PrsFusionadosForm(proyecto=proyecto),
+        },
+    )
+
+
 def tecnicas_proyecto(request, pk):
-    """RF-12: técnicas asignadas a un proyecto y formulario para asignar una nueva."""
-    proyecto = get_object_or_404(Proyecto.objects.select_related("periodo", "lider"), pk=pk)
+    """RF-12 y RF-14: técnicas asignadas con su cumplimiento y formulario para asignar."""
+    proyecto = _proyecto(pk)
 
     if request.method == "POST":
         formulario = AsignacionTecnicaForm(request.POST, proyecto=proyecto)
@@ -333,23 +411,95 @@ def tecnicas_proyecto(request, pk):
                 f"con frecuencia «{asignacion.frecuencia}».",
             )
             return redirect("tecnicas_proyecto", pk=proyecto.pk)
-    else:
-        formulario = AsignacionTecnicaForm(proyecto=proyecto)
+        return _pagina_tecnicas(request, proyecto, formulario=formulario)
 
-    asignaciones = (
-        proyecto.asignaciones_tecnicas.select_related("tecnica", "usuario")
-        .annotate(registradas=Count("aplicaciones"))
-        .order_by("tecnica__nombre")
-    )
+    return _pagina_tecnicas(request, proyecto)
+
+
+@require_POST
+def guardar_prs_fusionados(request, pk):
+    """RF-14: PRs fusionados acumulados a un corte (esperadas de las técnicas «Por PR»)."""
+    proyecto = _proyecto(pk)
+    formulario = PrsFusionadosForm(request.POST, proyecto=proyecto)
+    if not formulario.is_valid():
+        return _pagina_tecnicas(request, proyecto, form_prs=formulario)
+
+    corte = formulario.cleaned_data["corte"]
+    corte.prs_fusionados = formulario.cleaned_data["prs_fusionados"]
+    corte.save(update_fields=["prs_fusionados"])
+    etiqueta = etiquetas_de_cortes(proyecto)[corte.pk]
+    messages.success(request, f"PRs fusionados al {etiqueta}: {corte.prs_fusionados}.")
+    return redirect("tecnicas_proyecto", pk=proyecto.pk)
+
+
+def _corte_de(fecha, cortes):
+    """Corte al que cuenta una aplicación: el primero con fecha igual o posterior."""
+    for numero, corte in enumerate(cortes, 1):
+        if fecha <= corte.fecha:
+            return f"Corte {numero}"
+    return "Después del último corte"
+
+
+def registrar_aplicacion(request, pk):
+    """RF-13: registrar la aplicación de una técnica; no se guarda sin enlace de evidencia."""
+    proyecto = _proyecto(pk)
+
+    if request.method == "POST":
+        formulario = AplicacionTecnicaForm(request.POST, proyecto=proyecto)
+        if formulario.is_valid():
+            aplicacion = formulario.save()
+            fila = next(
+                t
+                for t in cumplimiento_de_tecnicas(proyecto).tecnicas
+                if t.asignacion.pk == aplicacion.asignacion_id
+            )
+            avance = (
+                f" Lleva {fila.registradas} de {fila.esperadas} ({fila.porcentaje:.0f} %)."
+                if fila.porcentaje is not None
+                else ""
+            )
+            messages.success(
+                request,
+                f"Aplicación de «{aplicacion.asignacion.tecnica}» registrada.{avance}",
+            )
+            return redirect("tecnicas_proyecto", pk=proyecto.pk)
+        seleccionada = formulario.cleaned_data.get("asignacion")
+    else:
+        seleccionada = None
+        if request.GET.get("asignacion", "").isdigit():
+            seleccionada = proyecto.asignaciones_tecnicas.filter(
+                pk=request.GET["asignacion"]
+            ).first()
+        formulario = AplicacionTecnicaForm(
+            proyecto=proyecto, initial={"asignacion": seleccionada} if seleccionada else None
+        )
+
+    # Panel lateral del mockup: la técnica elegida y sus aplicaciones registradas.
+    detalle = None
+    if seleccionada is not None:
+        cortes = list(proyecto.cortes.all())
+        fila = next(
+            t
+            for t in cumplimiento_de_tecnicas(proyecto).tecnicas
+            if t.asignacion.pk == seleccionada.pk
+        )
+        detalle = {
+            "fila": fila,
+            "aplicaciones": [
+                {"aplicacion": a, "corte": _corte_de(a.fecha, cortes)}
+                for a in fila.aplicaciones
+            ],
+        }
+
+    errores = formulario.errors if formulario.is_bound else {}
     return render(
         request,
-        "dashboard/tecnicas_proyecto.html",
+        "dashboard/registrar_aplicacion.html",
         {
             "proyecto": proyecto,
-            "asignaciones": asignaciones,
             "formulario": formulario,
-            "total_catalogo": TecnicaSQA.objects.count(),
-            "aplicaciones": sum(a.registradas for a in asignaciones),
+            "detalle": detalle,
+            "falta_evidencia": "evidencia" in errores and not formulario.data.get("evidencia"),
         },
     )
 def grafica_metricas(request, pk):
@@ -384,20 +534,29 @@ def grafica_metricas(request, pk):
     })
 
 
+def reporte_salud(request, pk):
+    """RF-15: reporte de salud de un proyecto en un corte (por omisión, el último)."""
+    proyecto = _proyecto(pk)
+    selector = CorteReporteForm(request.GET or None, proyecto=proyecto)
+    corte = None
+    if request.GET and selector.is_valid():
+        corte = selector.cleaned_data["corte"]
+    if corte is None:
+        corte = proyecto.cortes.last()
+        selector = CorteReporteForm(proyecto=proyecto, initial={"corte": corte})
+
+    reporte = reporte_de_salud(proyecto, corte) if corte else None
+    return render(
+        request,
+        "dashboard/reporte_salud.html",
+        {"proyecto": proyecto, "selector": selector, "reporte": reporte},
+    )
+
+
 def inicio(request):
     proyectos = Proyecto.objects.all()
-
-    if proyectos.exists():
-        reportes = []
-        for proyecto in proyectos:
-            reportes_salud = get_object_or_404(ReporteSalud.objects.filter(proyecto=proyecto))
-            for reporte in reportes_salud:
-                reportes.append(reporte)
-
-        return render(request, "dashboard/inicio.html"
-                    , {
-            "proyectos": proyectos,
-            "reportes": reportes
-        })
-    else:
-        return render(request, "dashboard/inicio.html")
+    reportes = ReporteSalud.objects.filter(proyecto__in=proyectos).select_related("proyecto")
+    return render(request, "dashboard/inicio.html", {
+        "proyectos": proyectos,
+        "reportes": reportes,
+    })
