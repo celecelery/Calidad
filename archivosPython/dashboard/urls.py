@@ -11,6 +11,7 @@ urlpatterns = [
     path("proyectos/<int:pk>/archivar/", views.archivar_proyecto, name="archivar_proyecto"),
     path("proyectos/<int:pk>/reactivar/", views.reactivar_proyecto, name="reactivar_proyecto"),
     path("proyectos/<int:pk>/metricas/", views.metricas_proyecto, name="metricas_proyecto"),
+    path("proyectos/<int:pk>/graficas/", views.graficas_proyecto, name="graficas_proyecto"),
     path("proyectos/<int:pk>/mediciones/", views.capturar_medicion, name="capturar_medicion"),
     path("proyectos/<int:pk>/cortes/", views.agregar_corte, name="agregar_corte"),
     path(
@@ -18,7 +19,6 @@ urlpatterns = [
         views.quitar_metrica,
         name="quitar_metrica",
     ),
-    path("proyectos/<int:pk>/graficas/", views.grafica_metricas, name="metricas_proyecto"),
     path("metricas/", views.metricas_view, name="lista_metricas"),
     path("metricas/nueva/", views.metricas_view, name="metrica_nueva"),
     path("metricas/<int:pk>/editar/", views.metricas_view, name="editar_metrica"),
