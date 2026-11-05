@@ -12,9 +12,42 @@
     <div class="actions"><a class="btn primary" href="{% url 'proyecto_nuevo' %}">+ Registrar proyecto</a></div>
 </div>
 
+
 <div class="card">
+    <div class="split">
+        <div class="stack" style="gap: 10px;">
+            <div class="table-wrap">
+                <table class="sheet">
+                    <thead>
+                        <tr>
+                            <th class="rn"></th>
+                            <th>Proyecto</th>
+                            <th>Periodo</th>
+                            <th>Estado</th>
+                            <th>Semáforo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proyecto in proyectos%}
+                            <td><b>{{ proyecto.nombre }}</b></td>
+                            <td>{{ proyecto.periodo.nombre }}</td>
+                            <td>{{ proyecto.estado }}</td>
+                            {% if proyecto.estado != "Archivado" %}
+                                {% for reporte in reportes %}
+                                    {% if proyecto == reporte.proyecto %}
+                                        <td>{{reporte.semaforo}}</td>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor%}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     <div class="card-b">
         {% plotly_app name="MiDashboard" ratio=0.6 %}
     </div>
+    
 </div>
 {% endblock %}

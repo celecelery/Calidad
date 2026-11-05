@@ -349,7 +349,11 @@ class MetricaProyecto(models.Model):
     # Relación 'Métrica_Proyecto' con atributos adicionales 'Valor' y 'Corte' (RF-08: medición)
     #pk = models.CompositePrimaryKey("id_metrica", "id_periodo", "id_proyecto")
 
-    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE)
+    proyecto = models.ForeignKey(
+        Proyecto, 
+        on_delete=models.CASCADE,
+        related_name='metricasProyecto'
+    )
     metrica = models.ForeignKey(Metrica, on_delete=models.CASCADE)
     valor = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Valor")
     corte = models.ForeignKey(

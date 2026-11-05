@@ -20,7 +20,15 @@ from .forms import (
     TecnicaSQAForm,
     etiquetas_de_cortes,
 )
-from .models import AsignacionTecnica, Metrica, MetricaProyecto, Proyecto, TecnicaSQA, Usuario
+from .models import (
+    AsignacionTecnica,
+    Metrica,
+    MetricaProyecto,
+    Proyecto,
+    ReporteSalud,
+    TecnicaSQA,
+    Usuario,
+)
 from .salud import reporte_de_salud
 
 
@@ -501,6 +509,36 @@ def registrar_aplicacion(request, pk):
             "falta_evidencia": "evidencia" in errores and not formulario.data.get("evidencia"),
         },
     )
+def grafica_metricas(request, pk):
+    """RF-09: Graficas por métrica"""
+    proyecto = _proyecto(pk) 
+    mediciones = (
+        MetricaProyecto.objects
+        .filter(proyecto=proyecto)
+        .select_related("metrica", "corte")
+        .order_by("-metrica__es_base", "metrica__clave", "metrica__nombre", "corte__fecha")
+    )
+
+    agrupadas = {}
+    for m in mediciones:
+        metrica = m.metrica
+        grupo = agrupadas.setdefault(metrica.pk, {
+            "nombre": str(metrica),
+            "es_porcentaje": metrica.unidad == metrica.Unidad.PORCENTAJE,
+            "meta": float(metrica.meta),
+            "meta_texto": metrica.meta_texto,
+            "cortes": [],
+            "valores": [],
+            "cumple": [],
+        })
+        grupo["cortes"].append(str(m.corte))
+        grupo["valores"].append(float(m.valor))
+        grupo["cumple"].append(metrica.cumple(m.valor))
+
+    return render(request, "dashboard/proyecto_grafica.html", {
+        "proyecto": proyecto,
+        "graficas": list(agrupadas.values()),
+    })
 
 
 def reporte_salud(request, pk):
@@ -523,4 +561,9 @@ def reporte_salud(request, pk):
 
 
 def inicio(request):
-    return render(request, "dashboard/inicio.html")
+    proyectos = Proyecto.objects.all()
+    reportes = ReporteSalud.objects.filter(proyecto__in=proyectos).select_related("proyecto")
+    return render(request, "dashboard/inicio.html", {
+        "proyectos": proyectos,
+        "reportes": reportes,
+    })
