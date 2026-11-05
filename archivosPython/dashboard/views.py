@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
-from .models import Usuario
+from .models import ReporteSalud, Usuario
 
 from . import plotly_app  # noqa: F401  (registra la aplicación Dash)
 from .forms import (
@@ -20,8 +20,13 @@ from .forms import (
 from .models import Metrica, MetricaProyecto, Proyecto, TecnicaSQA
 
 def obtener_perfil_usuario(request):
-    usuario = Usuario.objects.get(user=request.user)
-    return usuario.get_perfil()
+    if(request.user.is_superuser):
+        print("valid access")
+        return 'administrador'
+    else:
+        return 'miembro'
+    #usuario = Usuario.objects.get(nombre=request.user.username)
+    #return usuario.get_perfil()
 
 def periodo_view(request):
     """RF-01: formulario para registrar un periodo."""
@@ -347,7 +352,52 @@ def tecnicas_proyecto(request, pk):
             "aplicaciones": sum(a.registradas for a in asignaciones),
         },
     )
+def grafica_metricas(request, pk):
+    """RF-09: Graficas por métrica"""
+    proyecto = _proyecto(pk) 
+    mediciones = (
+        MetricaProyecto.objects
+        .filter(proyecto=proyecto)
+        .select_related("metrica", "corte")
+        .order_by("-metrica__es_base", "metrica__clave", "metrica__nombre", "corte__fecha")
+    )
+
+    agrupadas = {}
+    for m in mediciones:
+        metrica = m.metrica
+        grupo = agrupadas.setdefault(metrica.pk, {
+            "nombre": str(metrica),
+            "es_porcentaje": metrica.unidad == metrica.Unidad.PORCENTAJE,
+            "meta": float(metrica.meta),
+            "meta_texto": metrica.meta_texto,
+            "cortes": [],
+            "valores": [],
+            "cumple": [],
+        })
+        grupo["cortes"].append(str(m.corte))
+        grupo["valores"].append(float(m.valor))
+        grupo["cumple"].append(metrica.cumple(m.valor))
+
+    return render(request, "dashboard/proyecto_grafica.html", {
+        "proyecto": proyecto,
+        "graficas": list(agrupadas.values()),
+    })
 
 
 def inicio(request):
-    return render(request, "dashboard/inicio.html")
+    proyectos = Proyecto.objects.all()
+
+    if proyectos.exists():
+        reportes = []
+        for proyecto in proyectos:
+            reportes_salud = get_object_or_404(ReporteSalud.objects.filter(proyecto=proyecto))
+            for reporte in reportes_salud:
+                reportes.append(reporte)
+
+        return render(request, "dashboard/inicio.html"
+                    , {
+            "proyectos": proyectos,
+            "reportes": reportes
+        })
+    else:
+        return render(request, "dashboard/inicio.html")

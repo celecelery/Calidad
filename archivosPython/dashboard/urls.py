@@ -16,6 +16,7 @@ urlpatterns = [
         views.quitar_metrica,
         name="quitar_metrica",
     ),
+    path("proyectos/<int:pk>/graficas/", views.grafica_metricas, name="metricas_proyecto"),
     path("metricas/", views.metricas_view, name="lista_metricas"),
     path("metricas/nueva/", views.metricas_view, name="metrica_nueva"),
     path("metricas/<int:pk>/editar/", views.metricas_view, name="editar_metrica"),

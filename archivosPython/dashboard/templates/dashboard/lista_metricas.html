@@ -26,7 +26,12 @@
                             <td class="rn">{{ forloop.counter }}</td>
                             <td class="nw">{{ fila.clave|default:"—" }}</td>
                             <td{% if fila.pk == metrica.pk %} class="sel"{% endif %}>
-                                <a class="celda" href="{% url 'editar_metrica' fila.pk %}"><b>{{ fila.nombre }}</b></a>
+                                <a class="celda" 
+                                    {% if request.user.is_superuser %} 
+                                        href="{% url 'editar_metrica' fila.pk %}" 
+                                    {% endif %}>
+                                    <b>{{ fila.nombre }}</b>
+                                </a>
                             </td>
                             <td>{{ fila.tipo }}</td>
                             <td class="c">{{ fila.unidad }}</td>

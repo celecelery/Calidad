@@ -1,0 +1,51 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const graficas = JSON.parse(document.getElementById("datos-graficas").textContent);
+  const VERDE = "#16a34a", ROJO = "#dc2626";
+
+  graficas.forEach((g, i) => {
+    const sufijo = g.es_porcentaje ? " %" : "";
+    const colores = g.cumple.map(ok => (ok ? VERDE : ROJO));
+
+    new Chart(document.getElementById(`grafica-${i + 1}`), {
+      type: "line",
+      data: {
+        labels: g.cortes,
+        datasets: [
+          {
+            label: g.nombre,
+            data: g.valores,
+            showLine: false,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointBackgroundColor: colores,
+            pointBorderColor: colores,
+          },
+          {
+            label: `Meta ${g.meta_texto}`,
+            data: g.cortes.map(() => g.meta),
+            pointRadius: 0,
+            borderDash: [6, 4],
+            borderColor: "#6b7280",
+            borderWidth: 2,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ...(g.es_porcentaje ? { max: 100 } : {}),
+            ticks: { callback: v => v + sufijo },
+          },
+        },
+        plugins: {
+          tooltip: {
+            callbacks: { label: c => `${c.dataset.label}: ${c.parsed.y}${sufijo}` },
+          },
+        },
+      },
+    });
+  });
+</script>

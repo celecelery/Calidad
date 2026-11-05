@@ -32,7 +32,9 @@
                             <td>{{ tecnica.descripcion }}</td>
                             <td>{% if tecnica.referencia_norma %}{{ tecnica.referencia_norma }}{% else %}<span class="muted">Sin referencia</span>{% endif %}</td>
                             <td class="num" title="Proyectos que la tienen asignada">{{ tecnica.en_uso }}</td>
-                            <td class="c"><a class="btn sm" href="{% url 'editar_tecnica' tecnica.pk %}">Editar</a></td>
+                            {% if request.user.is_superuser %}
+                                <td class="c"><a class="btn sm" href="{% url 'editar_tecnica' tecnica.pk %}">Editar</a></td>
+                            {% endif %}
                         </tr>
                     {% empty %}
                         <tr><td class="rn"></td><td colspan="5" class="muted">{% if busqueda %}Ninguna técnica coincide con «{{ busqueda }}».{% else %}El catálogo está vacío.{% endif %}</td></tr>
