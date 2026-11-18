@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -29,6 +30,7 @@ from .models import (
     TecnicaSQA,
     Usuario,
 )
+from .reporte_pdf import generar_pdf, nombre_archivo
 from .salud import reporte_de_salud
 
 
@@ -541,9 +543,11 @@ def grafica_metricas(request, pk):
     })
 
 
-def reporte_salud(request, pk):
-    """RF-15: reporte de salud de un proyecto en un corte (por omisión, el último)."""
-    proyecto = _proyecto(pk)
+def _reporte_elegido(request, proyecto):
+    """Corte elegido en el selector (por omisión, el último) y su reporte de salud.
+
+    Devuelve (selector, reporte); el reporte es None si el proyecto no tiene cortes.
+    """
     selector = CorteReporteForm(request.GET or None, proyecto=proyecto)
     corte = None
     if request.GET and selector.is_valid():
@@ -551,13 +555,32 @@ def reporte_salud(request, pk):
     if corte is None:
         corte = proyecto.cortes.last()
         selector = CorteReporteForm(proyecto=proyecto, initial={"corte": corte})
+    return selector, reporte_de_salud(proyecto, corte) if corte else None
 
-    reporte = reporte_de_salud(proyecto, corte) if corte else None
+
+def reporte_salud(request, pk):
+    """RF-15: reporte de salud de un proyecto en un corte (por omisión, el último)."""
+    proyecto = _proyecto(pk)
+    selector, reporte = _reporte_elegido(request, proyecto)
     return render(
         request,
         "dashboard/reporte_salud.html",
         {"proyecto": proyecto, "selector": selector, "reporte": reporte},
     )
+
+
+def reporte_salud_pdf(request, pk):
+    """RF-17: descarga en PDF el reporte de salud del corte elegido (por omisión, el último)."""
+    proyecto = _proyecto(pk)
+    _, reporte = _reporte_elegido(request, proyecto)
+    if reporte is None:
+        messages.warning(
+            request, "El proyecto todavía no tiene cortes; no hay reporte que exportar."
+        )
+        return redirect("reporte_salud", pk=pk)
+    respuesta = HttpResponse(generar_pdf(reporte), content_type="application/pdf")
+    respuesta["Content-Disposition"] = f'attachment; filename="{nombre_archivo(reporte)}"'
+    return respuesta
 
 
 def inicio(request):
