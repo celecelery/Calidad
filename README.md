@@ -1,23 +1,26 @@
 # Calidad
 
-**Deployment**
-* Ve a la carpeta ArchivosPython
-* En la terminal ejecuta los siguientes comando para crear y activar un entorno virtual:
-```
-	python -m venv venv
-	.\venv\Scripts\Activate.ps1
-```
-* Instala los requerimientos de requirements.txt con el siguiente comando:
-```
-pip install -r requirements.txt
-```
-* Para iniciar el desarrollo del servidor, ejecuta el siguiente comando:
-```
-python manage.py runserver
-```
-   e ingresa a la dirección que aparece en la terminal
+**Inicializar con Docker**
 
-* Para realizar migraciones, utiliza el siguiente comando:
+* Ve a la carpeta ArchivosPython
+* Construye los contenedores con el siguiente comando:
+
 ```
-python manage.py migrate
+	docker compose build
+```
+
+* Inicia la aplicación con el siguiente comando:
+```
+	docker compose up -d --build
+```
+ Y abre la aplicación en el 'localhost'
+
+* Para realizar las migraciones, utiliza el siguiente comando:
+```
+	docker compose exec web python manage.py migrate
+```
+
+* Para apagar la aplicación, utiliza el siguiente comando:
+```
+	docker compose down
 ```
