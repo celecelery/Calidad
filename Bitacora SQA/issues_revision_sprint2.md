@@ -120,7 +120,7 @@ La lista «Líder» está vacía, así que no se puede registrar ningún proyect
 **Criterios de aceptación**
 - [ ] Un Administrador puede crear un `Usuario`, ligarlo a una cuenta y elegir su perfil sin usar el shell
 - [ ] La lista «Líder» ofrece a los usuarios registrados en una base nueva (CP-20-05)
-- [ ] El README explica cómo crear el primer Administrador
+- [x] El README explica cómo crear el primer Administrador (tarea 13.2, con `manage.py shell` mientras no exista la pantalla)
 - [ ] Existe una prueba automatizada que cubre el caso
 
 ---
