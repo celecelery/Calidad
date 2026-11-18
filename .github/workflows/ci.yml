@@ -12,6 +12,24 @@ jobs:
     env:
       SECRET_KEY: clave-solo-para-ci-no-es-secreta
       DEBUG: "True"
+      DB_HOST: localhost
+      DB_NAME: mydatabase
+      DB_USER: myuser
+      DB_PASSWORD: mypassword
+    services:
+      db:
+        image: postgres:16
+        env:
+          POSTGRES_DB: mydatabase
+          POSTGRES_USER: myuser
+          POSTGRES_PASSWORD: mypassword
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U myuser -d mydatabase"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: archivosPython   

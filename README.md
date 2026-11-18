@@ -35,7 +35,7 @@ Si PowerShell no deja ejecutar `Activate.ps1`, corre `Set-ExecutionPolicy -Scope
 ### 3. Instalar las dependencias
 
 ```
-pip install -r requirements.txt
+	docker compose up -d --build
 ```
 
 La primera vez puede tardar unos 10 minutos.
