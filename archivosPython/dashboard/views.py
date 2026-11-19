@@ -34,7 +34,7 @@ from .models import (
     Usuario,
 )
 from .reporte_pdf import generar_pdf, nombre_archivo
-from .salud import comparar_corte_anterior, reporte_de_salud
+from .salud import reporte_de_salud
 
 
 def obtener_perfil_usuario(request):
@@ -571,24 +571,6 @@ def reporte_salud(request, pk):
         {"proyecto": proyecto, "selector": selector, "reporte": reporte},
     )
 
-def reporte_comparar(request, pk):
-    """RF-16 Comparación con el corte anterior."""
-    proyecto = _proyecto(pk)
-    comparaciones = comparar_corte_anterior(proyecto)
-    if(comparaciones is None):
-        messages.warning(
-            request, "No existe un corte anterior."
-        )
-        return redirect("reporte_salud", pk=pk)
-    return render(
-        request, 
-        "dashboard/comparacion_cortes.html",
-        {
-            "proyecto": proyecto,
-            "comparaciones": comparaciones
-        }
-    )
-    
 
 def historial_salud(request, pk):
     """RF-18: historial de reportes de salud del proyecto (un reporte por corte)."""
