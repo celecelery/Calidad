@@ -1,0 +1,41 @@
+# Despliegue en Render (https://render.com) como Blueprint.
+# Crea la base PostgreSQL y el servicio web con el Dockerfile de archivosPython.
+databases:
+  - name: sqa-db
+    plan: free
+    databaseName: mydatabase
+    user: myuser
+
+services:
+  - type: web
+    name: dashboard-sqa
+    runtime: docker
+    plan: free
+    rootDir: archivosPython
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    dockerCommand: ./start.sh
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CSRF_TRUSTED_ORIGINS
+        value: "https://*.onrender.com"
+      - key: PORT
+        value: "8000"
+      - key: DB_HOST
+        fromDatabase: {name: sqa-db, property: host}
+      - key: DB_NAME
+        fromDatabase: {name: sqa-db, property: database}
+      - key: DB_USER
+        fromDatabase: {name: sqa-db, property: user}
+      - key: DB_PASSWORD
+        fromDatabase: {name: sqa-db, property: password}
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
