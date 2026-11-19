@@ -23,4 +23,6 @@ RUN mkdir -p /app/staticfiles
 EXPOSE 8000
 
 # Run Django
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+# Por defecto arranca con start.sh (migraciones + estáticos + Gunicorn).
+# docker-compose.yml sobreescribe este comando para el despliegue local.
+CMD ["./start.sh"]
