@@ -17,6 +17,7 @@ from .reporte_pdf import (
     generar_pdf,
     indicadores,
     nombre_archivo,
+    texto_comparacion,
 )
 from .salud import reporte_de_salud
 from .test_reporte_salud import ReporteBase
@@ -32,8 +33,34 @@ class ContenidoDelPdfTests(ReporteBase):
         filas = filas_de_metricas(reporte_de_salud(self.proyecto, self.corte2))
         self.assertEqual(len(filas), 6)
         cobertura = next(fila for fila in filas if fila[0] == "M-01")
-        self.assertEqual(cobertura[1:], ["Cobertura de código", "Pruebas", "72 %", "≥ 70 %", "Sí"])
-        self.assertEqual([fila[-1] for fila in filas].count("No"), 1)
+        self.assertEqual(
+            cobertura[1:6], ["Cobertura de código", "Pruebas", "72 %", "≥ 70 %", "Sí"]
+        )
+        self.assertEqual([fila[5] for fila in filas].count("No"), 1)
+
+    def test_comparacion_con_el_corte_anterior(self):
+        # RF-16 en el PDF: valor del corte anterior y tendencia, igual que la pantalla.
+        self.capturar(self.corte1, {"M-01": 65, "M-03": 2})
+        self.capturar(self.corte2, {"M-01": 72, "M-03": 2, "M-04": 92})
+        reporte = reporte_de_salud(self.proyecto, self.corte2)
+        filas = {fila[0]: fila for fila in filas_de_metricas(reporte)}
+        self.assertEqual(filas["M-01"][3:], ["72 %", "≥ 70 %", "Sí", "65 %", "Mejoró"])
+        self.assertEqual(filas["M-03"][6:], ["2", "Se mantuvo"])
+        self.assertEqual(filas["M-04"][6:], ["Sin medición", "Sin dato"])
+        self.assertEqual(filas["M-06"][6:], ["Sin medición", "Sin dato"])
+        self.assertEqual(
+            texto_comparacion(reporte),
+            "Contra el corte 1: 1 mejoró, 1 se mantuvo y 4 no se pueden comparar.",
+        )
+
+    def test_primer_corte_sin_comparacion(self):
+        self.capturar(self.corte1, self.valores(6))
+        reporte = reporte_de_salud(self.proyecto, self.corte1)
+        self.assertTrue(all(fila[6:] == ["—", "—"] for fila in filas_de_metricas(reporte)))
+        self.assertEqual(
+            texto_comparacion(reporte),
+            "Es el primer corte del proyecto; todavía no hay corte anterior para comparar.",
+        )
 
     def test_metrica_sin_medicion(self):
         valores = self.valores(6)
@@ -110,6 +137,19 @@ class GenerarPdfTests(ReporteBase):
         self.proyecto.metricas.clear()
         pdf = generar_pdf(reporte_de_salud(self.proyecto, self.corte2))
         self.assertTrue(pdf.startswith(b"%PDF-"))
+
+    def test_pdf_con_comparacion(self):
+        # Mejoró, empeoró, se mantuvo y sin dato: las cuatro pastillas de la tendencia.
+        self.capturar(self.corte1, {"M-01": 65, "M-02": 97, "M-03": 0})
+        self.capturar(self.corte2, {"M-01": 72, "M-02": 90, "M-03": 0, "M-04": 92})
+        pdf = generar_pdf(reporte_de_salud(self.proyecto, self.corte2))
+        self.assertTrue(pdf.startswith(b"%PDF-"))
+
+    def test_proyecto_sin_metricas_con_corte_anterior(self):
+        self.proyecto.metricas.clear()
+        reporte = reporte_de_salud(self.proyecto, self.corte2)
+        self.assertEqual(texto_comparacion(reporte), "")
+        self.assertTrue(generar_pdf(reporte).startswith(b"%PDF-"))
 
     def test_nombre_con_caracteres_especiales(self):
         # Los textos que escribe el usuario no deben romper el formato de los párrafos.

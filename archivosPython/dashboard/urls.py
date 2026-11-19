@@ -34,7 +34,6 @@ urlpatterns = [
         name="guardar_prs_fusionados",
     ),
     path("proyectos/<int:pk>/reporte/", views.reporte_salud, name="reporte_salud"),
-    path("proyectos/<int:pk>/reporte/comparacion", views.reporte_comparar, name="reporte_comparar"),
     path("proyectos/<int:pk>/reporte/pdf/", views.reporte_salud_pdf, name="reporte_salud_pdf"),
     path("proyectos/<int:pk>/historial/", views.historial_salud, name="historial_salud"),
     path("tecnicas/", views.lista_tecnicas, name="lista_tecnicas"),

@@ -16,9 +16,24 @@ Tarea 10.2. Casos escritos a partir del **criterio de aceptación** de cada requ
 
 ---
 
+## RF-16 — Comparar el reporte con el corte anterior
+
+**Criterio de aceptación:** la tabla de métricas del reporte de salud muestra, junto al valor del corte elegido, el valor del corte anterior y si la métrica mejoró, empeoró o se mantuvo.
+**Regla:** la tendencia respeta el sentido de la meta. En una métrica «igual o mayor» (M-01) subir es mejorar; en una «igual o menor» (M-03, defectos críticos) bajar es mejorar. Se compara con el corte anterior al elegido, no siempre con los dos últimos.
+
+| ID | Tipo | Pasos | Datos | Resultado esperado | Automatizada en |
+|---|---|---|---|---|---|
+| CP-16-01 | Unitaria | Calcular la tendencia | M-01 de 65 a 72 y de 65 a 60; M-03 de 2 a 0 y de 2 a 3; mismo valor | M-01: Mejoró / Empeoró; M-03: Mejoró / Empeoró; mismo valor: Se mantuvo | `test_comparacion.py` › `TendenciaTests` |
+| CP-16-02 | Unitaria | Calcular el reporte del corte 2 | Corte 1 con M-01 = 65 y M-03 = 2; corte 2 con M-01 = 72 y M-03 = 0 | Corte anterior = corte 1; M-01 y M-03 Mejoró | `test_comparacion.py` › `test_compara_con_el_corte_anterior` |
+| CP-16-03 | Unitaria | Calcular el reporte del corte 2 y del 3 | Tres cortes con M-01 = 80, 72 y 90 | El corte 2 se compara con el 1 (Empeoró) y el 3 con el 2 (Mejoró) | `test_comparacion.py` › `test_usa_el_corte_anterior_al_elegido_no_el_ultimo` |
+| CP-16-04 | Unitaria | Calcular el reporte del primer corte | Un solo corte con datos | No hay corte anterior ni tendencias; la pantalla lo avisa | `test_comparacion.py` › `test_primer_corte_no_tiene_con_que_compararse`, `test_al_elegir_el_primer_corte_no_hay_comparacion` |
+| CP-16-05 | Unitaria | Calcular el reporte con mediciones faltantes | Métrica sin medición en el corte anterior y otra sin medición en el actual | Las dos quedan «Sin dato» y el resumen dice cuántas no se pueden comparar | `test_comparacion.py` › `test_sin_medicion_en_alguno_de_los_dos_cortes_no_tiene_tendencia`, `test_resumen_de_la_comparacion` |
+| CP-16-06 | Unitaria | Comparar dos cortes con los mismos valores | 6 de 6 metas en los dos cortes | El semáforo sigue siendo el de RF-15 (Verde) y el resumen dice «6 se mantuvieron» | `test_comparacion.py` › `test_el_semaforo_no_cambia_por_la_comparacion` |
+| CP-16-07 | Integración | Abrir el reporte de salud | Corte 1 y corte 2 con M-01 = 65 y 72 | La tabla muestra las columnas «Corte 1» y «Tendencia», la pastilla «Mejoró» y el resumen; la página aparte de #28 ya no existe (404) | `test_comparacion.py` › `test_tabla_con_corte_anterior_y_tendencia`, `test_ya_no_existe_la_pagina_aparte` |
+
 ## RF-17 — Exportar el reporte a PDF
 
-**Criterio de aceptación:** el reporte de salud de un corte se descarga en PDF con el mismo contenido de la pantalla (semáforo y su motivo, métricas contra meta y cumplimiento de técnicas con sus evidencias).
+**Criterio de aceptación:** el reporte de salud de un corte se descarga en PDF con el mismo contenido de la pantalla (semáforo y su motivo, métricas contra meta con la comparación de RF-16 y cumplimiento de técnicas con sus evidencias).
 
 | ID | Tipo | Pasos | Datos | Resultado esperado | Automatizada en |
 |---|---|---|---|---|---|
@@ -28,6 +43,7 @@ Tarea 10.2. Casos escritos a partir del **criterio de aceptación** de cada requ
 | CP-17-04 | Unitaria | Generar el PDF con datos raros | Proyecto sin métricas ni técnicas; nombre con `& < > "` y acentos | El PDF se genera sin errores y el nombre del archivo queda sin acentos ni símbolos | `test_reporte_pdf.py` › `test_proyecto_sin_metricas_ni_tecnicas`, `test_nombre_con_caracteres_especiales` |
 | CP-17-05 | Integración | Exportar el reporte de un proyecto sin cortes | Proyecto recién registrado | El botón está deshabilitado; si se abre la dirección, regresa al reporte con un aviso | `test_reporte_pdf.py` › `test_sin_cortes_el_boton_esta_deshabilitado`, `test_sin_cortes_regresa_al_reporte_con_aviso` |
 | CP-17-06 | Integración | Abrir la dirección del PDF sin sesión o de un proyecto que no existe | — | Sin sesión se redirige al login (RF-19); un proyecto inexistente da 404 | `test_reporte_pdf.py` › `test_sin_sesion_redirige_al_login`, `test_proyecto_inexistente_da_404` |
+| CP-17-07 | Unitaria | Generar el PDF de un corte con corte anterior, y del primer corte | Corte 1 y corte 2 con métricas que mejoran, empeoran, se mantienen y sin dato | El PDF lleva las columnas del corte anterior y «Tendencia» con las mismas pastillas y el mismo resumen que la pantalla; en el primer corte dice que no hay con qué comparar | `test_reporte_pdf.py` › `test_comparacion_con_el_corte_anterior`, `test_primer_corte_sin_comparacion`, `test_pdf_con_comparacion` |
 
 ## RF-15 — Reporte de salud de un proyecto en un corte
 
@@ -194,7 +210,8 @@ Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Djang
 
 | Requisito | Casos | Automatizados | Por automatizar (10.3) | Pendientes de implementar |
 |---|---|---|---|---|
-| RF-17 | 6 | 6 | 0 | 0 |
+| RF-16 | 7 | 7 | 0 | 0 |
+| RF-17 | 7 | 7 | 0 | 0 |
 | RF-15 | 13 | 13 | 0 | 0 |
 | Flujo completo | 6 | 6 | 0 | 0 |
 | RF-14 | 7 | 7 | 0 | 0 |
@@ -208,4 +225,4 @@ Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Djang
 | RF-06 | 4 | 4 | 0 | 0 |
 | RF-05 | 4 | 4 | 0 | 0 |
 | RF-20 | 5 | 0 | 0 | 5 |
-| **Total** | **70** | **60** | **0** | **10** |
+| **Total** | **78** | **68** | **0** | **10** |

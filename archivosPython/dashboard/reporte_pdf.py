@@ -1,8 +1,9 @@
 """RF-17: exportar el reporte de salud (RF-15) a PDF.
 
 El PDF lleva lo mismo que la pantalla del reporte: el semáforo con su motivo, los indicadores
-(metas, defectos críticos y técnicas), la tabla de métricas contra meta y el cumplimiento de
-técnicas SQA con sus enlaces de evidencia.
+(metas, defectos críticos y técnicas), la tabla de métricas contra meta con la comparación
+contra el corte anterior (RF-16) y el cumplimiento de técnicas SQA con sus enlaces de
+evidencia.
 
 Formato de una página tipo «informe ejecutivo», con la paleta turquesa del sistema (sqa.css):
 banda de encabezado, paneles con barra de título, medidores circulares para los indicadores,
@@ -33,7 +34,15 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from .cumplimiento import clase_de_porcentaje
-from .salud import AMARILLO, METAS_ROJO, METAS_VERDE, ROJO, TECNICAS_VERDE, VERDE
+from .salud import (
+    AMARILLO,
+    CLASE_TENDENCIA,
+    METAS_ROJO,
+    METAS_VERDE,
+    ROJO,
+    TECNICAS_VERDE,
+    VERDE,
+)
 
 # --- Fuentes ---
 _CARPETA_FUENTES = Path(reportlab.__file__).parent / "fonts"
@@ -61,6 +70,7 @@ ESTADOS = {
     "bad": (colors.HexColor("#e81123"), colors.HexColor("#ffc7ce"), colors.HexColor("#9c0006")),
     "": (colors.HexColor("#a19f9d"), GRIS_VACIO, TEXTO_2),
 }
+ESTADOS["gray"] = ESTADOS[""]  # .pill.gray de sqa.css
 CLASE_SEMAFORO = {ROJO: "bad", AMARILLO: "neutral", VERDE: "good"}
 
 SIN_DATO = "—"
@@ -160,7 +170,12 @@ def aviso_mediciones_faltantes(reporte):
 
 
 def filas_de_metricas(reporte):
-    """Filas de «Métricas contra meta»: ID, métrica, tipo, valor en el corte, meta y si cumple."""
+    """Filas de «Métricas contra meta»: ID, métrica, tipo, valor en el corte, meta, si cumple,
+    valor en el corte anterior y tendencia (RF-16).
+
+    Las dos últimas son «—» si el corte elegido es el primero (no hay con qué comparar).
+    """
+    comparar = reporte.corte_anterior is not None
     return [
         [
             fila.metrica.clave,
@@ -169,9 +184,19 @@ def filas_de_metricas(reporte):
             fila.medicion.valor_texto if fila.medicion else "Sin medición",
             fila.metrica.meta_texto,
             "Sí" if fila.cumple else "No",
+            (fila.anterior.valor_texto if fila.anterior else "Sin medición") if comparar
+            else SIN_DATO,
+            (fila.tendencia or "Sin dato") if comparar else SIN_DATO,
         ]
         for fila in reporte.filas
     ]
+
+
+def texto_comparacion(reporte):
+    """La misma frase que la pantalla arriba de la tabla de métricas (RF-16)."""
+    if reporte.corte_anterior:
+        return reporte.resumen_comparacion
+    return "Es el primer corte del proyecto; todavía no hay corte anterior para comparar."
 
 
 def filas_de_tecnicas(reporte):
@@ -487,27 +512,51 @@ def _estilo_tabla(vacia=False, con_total=False):
     return TableStyle(comandos)
 
 
+def _valor(valor, negrita=True):
+    if valor == "Sin medición":
+        return Paragraph(f'<font color="#605e5c" size="7.5">{valor}</font>', ESTILOS["celda"])
+    texto = f"<b>{escape(valor)}</b>" if negrita else escape(valor)
+    return Paragraph(texto, ESTILOS["celda"])
+
+
+def _tendencia(texto):
+    """Pastilla de la tendencia, con los colores de la pantalla (.pill good, bad o gray)."""
+    if texto == "Sin dato":
+        return Paragraph(f'<font color="#605e5c">{texto}</font>', ESTILOS["celda"])
+    return _pastilla(texto, CLASE_TENDENCIA.get(texto, "gray"))
+
+
 def _tabla_metricas(reporte, ancho):
-    encabezados = ["ID", "Métrica", "Tipo", f"Corte {reporte.numero_corte}", "Meta", "Cumple"]
+    # RF-16: si hay corte anterior, se agregan su valor (antes del actual) y la tendencia.
+    comparar = reporte.corte_anterior is not None
+    encabezados = ["ID", "Métrica", "Tipo"]
+    anchos = [14 * mm, None, 19 * mm]
+    if comparar:
+        encabezados.append(f"Corte {reporte.numero_corte_anterior}")
+        anchos.append(23 * mm)
+    encabezados += [f"Corte {reporte.numero_corte}", "Meta", "Cumple"]
+    anchos += [23 * mm if comparar else 24 * mm, 19 * mm, 18 * mm]
+    if comparar:
+        encabezados.append("Tendencia")
+        anchos.append(27 * mm)
+    anchos[1] = ancho - sum(a for a in anchos if a)
+
     datos = [[_p(texto, "encabezado") for texto in encabezados]]
-    for clave, nombre, tipo, valor, meta, cumple in filas_de_metricas(reporte):
-        datos.append([
-            _p(clave, "clave"),
-            _p(nombre),
-            _p(tipo),
-            Paragraph(
-                f'<font color="#605e5c">{valor}</font>' if valor == "Sin medición"
-                else f"<b>{escape(valor)}</b>",
-                ESTILOS["celda"],
-            ),
-            _p(meta),
-            _pastilla(cumple, "good" if cumple == "Sí" else "bad"),
-        ])
+    for clave, nombre, tipo, valor, meta, cumple, anterior, tendencia in filas_de_metricas(
+        reporte
+    ):
+        fila = [_p(clave, "clave"), _p(nombre), _p(tipo)]
+        if comparar:
+            fila.append(_valor(anterior, negrita=False))
+        fila += [_valor(valor), _p(meta), _pastilla(cumple, "good" if cumple == "Sí" else "bad")]
+        if comparar:
+            fila.append(_tendencia(tendencia))
+        datos.append(fila)
     vacia = len(datos) == 1
     if vacia:
-        datos.append([_p("El proyecto no tiene métricas asignadas.", "h"), "", "", "", "", ""])
-    anchos = [16 * mm, None, 22 * mm, 26 * mm, 22 * mm, 18 * mm]
-    anchos[1] = ancho - sum(a for a in anchos if a)
+        datos.append(
+            [_p("El proyecto no tiene métricas asignadas.", "h")] + [""] * (len(anchos) - 1)
+        )
     tabla = Table(datos, colWidths=anchos, repeatRows=1)
     tabla.setStyle(_estilo_tabla(vacia=vacia))
     return tabla
@@ -661,7 +710,9 @@ def generar_pdf(reporte):
         _tarjetas(reporte, ancho),
         Spacer(0, 6 * mm),
         _titulo_seccion("Métricas contra meta", ancho),
-        Spacer(0, 2 * mm),
+        Spacer(0, 1.5 * mm),
+        _p(texto_comparacion(reporte), "objetivo"),
+        Spacer(0, 1.5 * mm),
         _tabla_metricas(reporte, ancho),
         Spacer(0, 6 * mm),
         _titulo_seccion("Cumplimiento de técnicas SQA", ancho),

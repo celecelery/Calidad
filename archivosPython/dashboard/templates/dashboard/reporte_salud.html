@@ -65,25 +65,33 @@
         <div class="alert warn">{% if reporte.sin_medicion == 1 %}Falta 1 medición en este corte; cuenta como meta no cumplida.{% else %}Faltan {{ reporte.sin_medicion }} mediciones en este corte; cuentan como metas no cumplidas.{% endif %} <a href="{% url 'metricas_proyecto' proyecto.pk %}">Capturar mediciones</a></div>
     {% endif %}
 
-    <div class="page-head" style="margin-bottom: 10px;"><h2>Métricas contra meta</h2></div>
+    {# RF-16: comparación con el corte anterior al elegido #}
+    <div class="page-head" style="margin-bottom: 10px;">
+        <div>
+            <h2>Métricas contra meta</h2>
+            <div class="sub">{% if reporte.corte_anterior %}{{ reporte.resumen_comparacion }}{% else %}Es el primer corte del proyecto; todavía no hay corte anterior para comparar.{% endif %}</div>
+        </div>
+    </div>
     <div class="table-wrap" style="margin-bottom: 18px;">
         <table class="sheet">
             <thead>
-                <tr><th class="rn"></th><th>ID</th><th>Métrica</th><th>Tipo</th><th class="num">Corte {{ reporte.numero_corte }}</th><th class="num">Meta</th><th class="c">Cumple</th></tr>
+                <tr><th class="rn"></th><th>ID</th><th>Métrica</th><th>Tipo</th>{% if reporte.corte_anterior %}<th class="num" title="{{ reporte.corte_anterior.fecha|date:'d/m/Y' }}">Corte {{ reporte.numero_corte_anterior }}</th>{% endif %}<th class="num">Corte {{ reporte.numero_corte }}</th><th class="num">Meta</th><th class="c">Cumple</th>{% if reporte.corte_anterior %}<th class="c">Tendencia</th>{% endif %}</tr>
             </thead>
             <tbody>
                 {% for fila in reporte.filas %}
                     <tr>
                         <td class="rn">{{ forloop.counter }}</td>
-                        <td>{{ fila.metrica.clave }}</td>
+                        <td class="nw">{{ fila.metrica.clave }}</td>
                         <td>{{ fila.metrica.nombre }}</td>
                         <td>{{ fila.metrica.tipo }}</td>
+                        {% if reporte.corte_anterior %}<td class="num">{% if fila.anterior %}{{ fila.anterior.valor_texto }}{% else %}<span class="muted">Sin medición</span>{% endif %}</td>{% endif %}
                         <td class="num">{% if fila.medicion %}<b>{{ fila.medicion.valor_texto }}</b>{% else %}<span class="muted">Sin medición</span>{% endif %}</td>
                         <td class="num">{{ fila.metrica.meta_texto }}</td>
                         <td class="c {% if fila.cumple %}good{% else %}bad{% endif %}">{% if fila.cumple %}Sí{% else %}No{% endif %}</td>
+                        {% if reporte.corte_anterior %}<td class="c">{% if fila.tendencia %}<span class="pill {{ fila.clase_tendencia }}">{{ fila.tendencia }}</span>{% else %}<span class="muted" title="Falta la medición en alguno de los dos cortes">Sin dato</span>{% endif %}</td>{% endif %}
                     </tr>
                 {% empty %}
-                    <tr><td class="rn"></td><td colspan="6" class="muted">El proyecto no tiene métricas asignadas.</td></tr>
+                    <tr><td class="rn"></td><td colspan="{% if reporte.corte_anterior %}8{% else %}6{% endif %}" class="muted">El proyecto no tiene métricas asignadas.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

@@ -15,6 +15,11 @@ Cuando un dato no existe (el proyecto no tiene métricas, no tiene la métrica M
 aplicaciones de técnicas esperadas), ese dato no vuelve Rojo al proyecto, pero tampoco se
 puede confirmar el Verde: el semáforo queda como máximo en Amarillo y el motivo lo dice.
 
+RF-16: cada fila de métricas trae también su medición en el corte anterior al elegido y su
+tendencia (Mejoró, Empeoró o Se mantuvo). La tendencia respeta el sentido de la meta: en
+«Defectos críticos» (igual o menor) bajar es mejorar. El primer corte no tiene con qué
+compararse, y una métrica sin medición en alguno de los dos cortes no tiene tendencia.
+
 ``semaforo_actual(proyecto)`` da el reporte del último corte; lo usa el dashboard (RF-10).
 ``historial_de_salud(proyecto)`` da el reporte de cada corte, del más reciente al más antiguo
 (RF-18).
@@ -39,6 +44,22 @@ TECNICAS_ROJO = 60
 
 # Para las plantillas: punto del menú, pastilla y luz encendida del semáforo.
 CLASE_SEMAFORO = {ROJO: "r", AMARILLO: "y", VERDE: "g"}
+
+# RF-16: tendencia de una métrica contra el corte anterior y su clase CSS (.pill).
+MEJORO = "Mejoró"
+EMPEORO = "Empeoró"
+SE_MANTUVO = "Se mantuvo"
+CLASE_TENDENCIA = {MEJORO: "good", EMPEORO: "bad", SE_MANTUVO: "gray"}
+
+
+def tendencia(metrica, valor_actual, valor_anterior):
+    """RF-16: si la métrica mejoró, empeoró o se mantuvo, según el sentido de su meta."""
+    if valor_actual == valor_anterior:
+        return SE_MANTUVO
+    subio = valor_actual > valor_anterior
+    if metrica.sentido == metrica.Sentido.MENOR_IGUAL:
+        return EMPEORO if subio else MEJORO
+    return MEJORO if subio else EMPEORO
 
 
 def calcular_semaforo(porcentaje_metas, defectos_criticos, porcentaje_tecnicas):
@@ -66,14 +87,29 @@ def _pct(valor):
 
 @dataclass
 class FilaMetrica:
-    """Una fila de «Métricas contra meta»: la métrica, su medición en el corte y si cumple."""
+    """Una fila de «Métricas contra meta»: la métrica, su medición en el corte y si cumple.
+
+    ``anterior`` es la medición de la misma métrica en el corte anterior (RF-16).
+    """
 
     metrica: object
     medicion: MetricaProyecto | None
+    anterior: MetricaProyecto | None = None
 
     @property
     def cumple(self):
         return self.metrica.cumple(self.medicion.valor) if self.medicion else False
+
+    @property
+    def tendencia(self):
+        """Mejoró, Empeoró o Se mantuvo; None si falta la medición en alguno de los dos cortes."""
+        if self.medicion is None or self.anterior is None:
+            return None
+        return tendencia(self.metrica, self.medicion.valor, self.anterior.valor)
+
+    @property
+    def clase_tendencia(self):
+        return CLASE_TENDENCIA.get(self.tendencia, "gray")
 
 
 @dataclass
@@ -89,6 +125,33 @@ class ReporteSalud:
     numero_corte: int
     filas: list = field(default_factory=list)
     tecnicas: CumplimientoProyecto | None = None
+    corte_anterior: object | None = None  # RF-16; None si es el primer corte
+
+    # --- comparación con el corte anterior (RF-16) ---
+    @property
+    def numero_corte_anterior(self):
+        return self.numero_corte - 1 if self.corte_anterior else None
+
+    @property
+    def resumen_comparacion(self):
+        """Frase con cuántas métricas mejoraron, empeoraron o se mantuvieron.
+
+        Por ejemplo: «Contra el corte 1: 3 mejoraron, 1 empeoró y 2 se mantuvieron.»
+        """
+        if not self.corte_anterior or not self.filas:
+            return ""
+        tendencias = [fila.tendencia for fila in self.filas]
+        partes = []
+        for valor, singular, plural in (
+            (MEJORO, "mejoró", "mejoraron"),
+            (EMPEORO, "empeoró", "empeoraron"),
+            (SE_MANTUVO, "se mantuvo", "se mantuvieron"),
+            (None, "no se puede comparar", "no se pueden comparar"),
+        ):
+            n = tendencias.count(valor)
+            if n:
+                partes.append(f"{n} {singular if n == 1 else plural}")
+        return f"Contra el corte {self.numero_corte_anterior}: " + _frase(partes, mayuscula=False)
 
     # --- metas ---
     @property
@@ -200,76 +263,41 @@ def _frase(partes, mayuscula=True):
     return texto + "."
 
 
-def reporte_de_salud(proyecto, corte):
-    """RF-15: reporte de salud de un proyecto en uno de sus cortes."""
-    cortes = list(proyecto.cortes.all())
-    numero = next(n for n, c in enumerate(cortes, 1) if c.pk == corte.pk)
-    mediciones = {
+def _mediciones(proyecto, corte):
+    """Mediciones de un corte, por métrica."""
+    if corte is None:
+        return {}
+    return {
         m.metrica_id: m
         for m in MetricaProyecto.objects.filter(proyecto=proyecto, corte=corte).select_related(
             "metrica"
         )
     }
-    filas = [FilaMetrica(metrica=m, medicion=mediciones.get(m.pk)) for m in proyecto.metricas.all()]
+
+
+def reporte_de_salud(proyecto, corte):
+    """RF-15: reporte de salud de un proyecto en uno de sus cortes.
+
+    RF-16: también compara cada métrica con el corte anterior al elegido (no con el último).
+    """
+    cortes = list(proyecto.cortes.all())
+    numero = next(n for n, c in enumerate(cortes, 1) if c.pk == corte.pk)
+    anterior = cortes[numero - 2] if numero > 1 else None
+    mediciones = _mediciones(proyecto, corte)
+    previas = _mediciones(proyecto, anterior)
+    filas = [
+        FilaMetrica(metrica=m, medicion=mediciones.get(m.pk), anterior=previas.get(m.pk))
+        for m in proyecto.metricas.all()
+    ]
     return ReporteSalud(
         proyecto=proyecto,
         corte=corte,
         numero_corte=numero,
         filas=filas,
         tecnicas=cumplimiento_de_tecnicas(proyecto, corte),
+        corte_anterior=anterior,
     )
 
-def comparar_corte_anterior(proyecto):
-    """RF-16: Comparación del corte actual con el corte anterior."""
-    ultimos_cortes = list(proyecto.cortes.order_by('-fecha', '-id')[:2])
-    if(len(ultimos_cortes) == 2):
-        corte_actual, corte_previo = ultimos_cortes
-        return comparar_mediciones(proyecto, corte_actual, corte_previo)
-    else:
-        return None
-
-def comparar_mediciones(proyecto, corte_actual, corte_previo):
-    mediciones_base = MetricaProyecto.objects.filter(proyecto=proyecto).select_related("metrica")
-    mediciones_previas = {m.metrica_id: m for m in mediciones_base.filter(corte=corte_previo)}
-    mediciones_actuales = {m.metrica_id: m for m in mediciones_base.filter(corte=corte_actual)}
-    comparaciones = []
-    for metrica_id in mediciones_actuales.keys():
-        metrica_actual = mediciones_actuales.get(metrica_id)
-        metrica_previa = mediciones_previas.get(metrica_id)
-        if(metrica_previa is None):
-            comparaciones.append({
-                "metrica_id": metrica_id,
-                "nombre": metrica_actual.metrica.nombre,
-                "indicador": 'Falta métrica previa'
-            })
-            continue
-        comparaciones.append(comparar_metrica(metrica_actual,metrica_previa))
-    return comparaciones
-
-def comparar_metrica(metrica_actual, metrica_previa):
-    indicadorMayor = 'Mejoró'
-    indicadorMenor = 'Empeoró'
-    if metrica_actual.valor == metrica_previa.valor:
-        return {
-            "metrica_id": metrica_actual.metrica_id,
-            "nombre": metrica_actual.metrica.nombre,
-            "indicador": 'Se mantúvo'
-        }
-    if metrica_actual.metrica.sentido == '<=':
-        indicadorMayor = 'Empeoró'
-        indicadorMenor = 'Mejoró'
-    if(metrica_actual.valor >= metrica_previa.valor):
-        return {
-            "metrica_id": metrica_actual.metrica_id,
-            "nombre": metrica_actual.metrica.nombre,
-            "indicador": indicadorMayor
-        }
-    else:
-        return {
-            "metrica_id": metrica_actual.metrica_id,
-            "nombre": metrica_actual.metrica.nombre,
-            "indicador": indicadorMenor
-        }
 
 def semaforo_actual(proyecto):
     """Reporte de salud del último corte del proyecto, o None si todavía no tiene cortes."""
