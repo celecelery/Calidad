@@ -213,6 +213,66 @@ def reporte_de_salud(proyecto, corte):
         tecnicas=cumplimiento_de_tecnicas(proyecto, corte),
     )
 
+def comparar_corte_anterior(proyecto):
+    """RF-16: Comparación del corte actual con el corte anterior."""
+    ultimos_cortes = list(proyecto.cortes.order_by('-fecha', '-id')[:2])
+    if(len(ultimos_cortes) == 2):
+        corte_actual, corte_previo = ultimos_cortes
+        return comparar_mediciones(proyecto, corte_actual, corte_previo)
+    else:
+        return None
+
+def comparar_mediciones(proyecto, corte_actual, corte_previo):
+    mediciones_previas = {
+        m.metrica_id: m
+        for m in MetricaProyecto.objects.filter(proyecto=proyecto, corte=corte_previo).select_related(
+            "metrica"
+        )
+    }
+    mediciones_actuales = {
+        m.metrica_id: m
+        for m in MetricaProyecto.objects.filter(proyecto=proyecto, corte=corte_actual).select_related(
+            "metrica"
+        )
+    }    
+    comparaciones = []
+    for metrica_id in mediciones_actuales.keys():
+        metrica_actual = mediciones_actuales.get(metrica_id)
+        metrica_previa = mediciones_previas.get(metrica_id)
+        if(metrica_previa is None):
+            comparaciones.append({
+                "metrica_id": metrica_id,
+                "nombre": metrica_actual.metrica.nombre,
+                "indicador": 'Falta métrica previa'
+            });
+            continue
+        comparaciones.append(comparar_metrica(metrica_actual,metrica_previa))
+    return comparaciones
+
+def comparar_metrica(metrica_actual, metrica_previa):
+    indicadorMayor = 'Mejoró'
+    indicadorMenor = 'Empeoró'
+    if metrica_actual.valor == metrica_previa.valor:
+        return {
+            "metrica_id": metrica_actual.metrica_id,
+            "nombre": metrica_actual.metrica.nombre,
+            "indicador": 'Se mantúvo'
+        }
+    if metrica_actual.metrica.sentido == '<=':
+        indicadorMayor = 'Empeoró'
+        indicadorMenor = 'Mejoró'
+    if(metrica_actual.valor >= metrica_previa.valor):
+        return {
+            "metrica_id": metrica_actual.metrica_id,
+            "nombre": metrica_actual.metrica.nombre,
+            "indicador": indicadorMayor
+        }
+    else:
+        return {
+            "metrica_id": metrica_actual.metrica_id,
+            "nombre": metrica_actual.metrica.nombre,
+            "indicador": indicadorMenor
+        }
 
 def semaforo_actual(proyecto):
     """Reporte de salud del último corte del proyecto, o None si todavía no tiene cortes."""

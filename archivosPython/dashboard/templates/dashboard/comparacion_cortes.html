@@ -1,0 +1,36 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Comparación de cortes — {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+
+<div class="card">
+    <div class="split">
+        <div class="stack" style="gap: 10px;">
+            <div class="table-wrap">
+                <table class="sheet">
+                    <thead>
+                        <tr>
+                            <th class="rn"></th>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Indicador</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comparacion in comparaciones %}
+                            <td><b>{{ comparacion.metrica_id }}</b></td>
+                            <td>{{ comparacion.nombre }}</td>
+                            <td>{{ comparacion.indicador }}</td>
+                        {% endfor%}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="card-b">
+        {% plotly_app name="MiDashboard" ratio=0.6 %}
+    </div>
+    
+</div>
+{% endblock %}
