@@ -49,7 +49,7 @@ El entorno virtual se crea una sola vez, pero hay que activarlo cada vez que abr
 pip install -r requirements.txt
 ```
 
-La primera vez puede tardar unos 10 minutos.
+La primera vez puede tardar unos 10 minutos. Esto también instala `ruff` y `pytest`, que se usan en la sección Pruebas y calidad.
 
 ### 4. Crear el archivo .env
 
@@ -77,18 +77,15 @@ Con Docker Desktop abierto, levanta solo el servicio de PostgreSQL del `docker-c
 docker compose up -d db
 ```
 
-* Para coleccionar los archivos estaticos para el uso de NGINX, usa el siguiente comando:
-```
-	docker compose run --rm web python manage.py collectstatic --noinput
-```
+La aplicación se conecta a la base en `localhost:5432`, así que ese puerto debe estar publicado en el servicio `db` del `docker-compose.yml` (`ports: - "5432:5432"`). Para comprobar que la base está lista, corre `docker compose ps`: el servicio `db` debe aparecer como `running`.
 
-* Inicia la aplicación con el siguiente comando:
+### 6. Crear las tablas
+
 ```
 python manage.py migrate
 ```
- Y abre la aplicación en 'localhost'
 
-Esto crea las tablas y carga las métricas base (M-01 a M-06) y el catálogo de técnicas SQA.
+Esto crea las tablas y carga las métricas base (M-01 a M-06) y el catálogo de técnicas SQA. Si el comando dice que no puede conectarse a la base, revisa que `docker compose ps` muestre `db` en ejecución y que el puerto 5432 esté publicado (paso 5). Las migraciones ya vienen en el repositorio: no hace falta correr `makemigrations`.
 
 ### 7. Crear el superusuario y darle perfil
 
@@ -98,18 +95,31 @@ Primero crea la cuenta con la que vas a iniciar sesión:
 python manage.py createsuperuser
 ```
 
-* En caso de que haya problemas con las migraciones, utiliza el siguiente comando:
-```
-	docker compose exec web python manage.py makemigrations
-```
- y vuelve a ejecutar el comando de migraciones.
+Después dale perfil de Administrador. Sin perfil, el sistema no te deja editar proyectos ni administrar catálogos, y no apareces en la lista de líderes al registrar un proyecto. Abre la consola de Django:
 
-* Para apagar la aplicación, utiliza el siguiente comando:
+```
+python manage.py shell
+```
+
+Y escribe estas líneas, cambiando `tu_usuario` por el usuario que acabas de crear y `Nombre Apellido` por tu nombre:
+
+```
+from django.contrib.auth import get_user_model
+from dashboard.models import Usuario
+u = get_user_model().objects.get(username="tu_usuario")
+Usuario.objects.update_or_create(user=u, defaults={"nombre": "Nombre Apellido", "perfil": "administrador"})
+exit()
+```
+
+Para un Miembro usa `"perfil": "miembro"`.
+
+### 8. Iniciar la aplicación
+
 ```
 python manage.py runserver
 ```
 
-Abre http://127.0.0.1:8000/ en el navegador e inicia sesión con tu cuenta.
+Abre http://127.0.0.1:8000/ en el navegador e inicia sesión con tu cuenta. Para apagar la aplicación, presiona `Ctrl+C` en la terminal donde corre.
 
 ## Pruebas y calidad
 
@@ -124,17 +134,20 @@ Ruff tiene que decir `All checks passed!`, todas las pruebas tienen que pasar y 
 
 ## Despliegue
 
-En la tarea 12.1 se preparó el proyecto para correr completo en Docker. El `Dockerfile` arma la imagen de la aplicación con Python 3.12 y el `docker-compose.yml` levanta dos servicios: `web`, con Django en el puerto 8000, y `db`, con PostgreSQL 16 y sus datos guardados en el volumen `postgres_data`.
+El proyecto corre completo en Docker. El `Dockerfile` arma la imagen de la aplicación con Python 3.12 y el `docker-compose.yml` levanta tres servicios: `web` (Django con Gunicorn, interno en el puerto 8000), `nginx` (publica la aplicación en el puerto 80 y sirve los archivos estáticos) y `db` (PostgreSQL 16, con sus datos en el volumen `postgres_data`).
 
-Para desplegar en un servidor (o probarlo todo en Docker), clona el repositorio, entra a `archivosPython` y crea el `.env` como en el paso 4. En `ALLOWED_HOSTS` agrega la IP o el dominio del servidor. Después:
+Para desplegar en un servidor (o probarlo todo en Docker), clona el repositorio, entra a `archivosPython` y crea el `.env` como en el paso 4. En `ALLOWED_HOSTS` agrega la IP o el dominio del servidor, y pon `DEBUG=False`. El contenedor `web` lee el `.env` desde la carpeta del proyecto, que `docker-compose.yml` monta en `/app`. Después:
 
 ```
 docker compose up -d --build
 docker compose exec web python manage.py migrate
+docker compose exec web python manage.py collectstatic --noinput
 docker compose exec web python manage.py createsuperuser
 ```
 
-El perfil del primer Administrador se da igual que en el paso 7, pero abriendo la consola con `docker compose exec web python manage.py shell`. La aplicación queda en el puerto 8000 del servidor.
+`collectstatic` copia los archivos estáticos (estilos y gráficas) al volumen que usa NGINX; sin ese paso la aplicación se ve sin estilos. El perfil del primer Administrador se da igual que en el paso 7, pero abriendo la consola con `docker compose exec web python manage.py shell`.
+
+La aplicación queda en el puerto 80 del servidor: abre `http://IP-DEL-SERVIDOR/` (o `http://localhost/` si la probaste en tu computadora).
 
 Para ver los mensajes de la aplicación usa `docker compose logs -f web`, y para detenerla `docker compose down`. Los datos se conservan en el volumen; `docker compose down -v` los borra.
 
@@ -143,7 +156,7 @@ Para ver los mensajes de la aplicación usa `docker compose logs -f web`, y para
 - `archivosPython/`: el proyecto de Django; aquí se ejecutan todos los comandos.
   - `config/`: configuración del proyecto (settings y urls).
   - `cuentas/`: inicio y cierre de sesión.
-  - `dashboard/`: la aplicación principal, con los modelos, vistas, plantillas y pruebas.
-  - `Dockerfile` y `docker-compose.yml`: el despliegue con Docker.
+  - `dashboard/`: la aplicación principal, con los modelos, vistas, plantillas y pruebas. Las carpetas `proyectos/`, `metricas/`, `tecnicas/` y `reportes/` están vacías: toda la lógica vive en `dashboard/`.
+  - `Dockerfile`, `docker-compose.yml` y `nginx/`: el despliegue con Docker.
 - `Bitacora SQA/`: bitácora, casos de prueba, matriz de trazabilidad y defectos.
 - `.github/`: plantillas de issues y PR, y el CI.
