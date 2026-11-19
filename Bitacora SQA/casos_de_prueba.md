@@ -16,6 +16,19 @@ Tarea 10.2. Casos escritos a partir del **criterio de aceptación** de cada requ
 
 ---
 
+## RF-17 — Exportar el reporte a PDF
+
+**Criterio de aceptación:** el reporte de salud de un corte se descarga en PDF con el mismo contenido de la pantalla (semáforo y su motivo, métricas contra meta y cumplimiento de técnicas con sus evidencias).
+
+| ID | Tipo | Pasos | Datos | Resultado esperado | Automatizada en |
+|---|---|---|---|---|---|
+| CP-17-01 | Integración | Abrir el reporte de salud y pulsar «Exportar PDF» | Corte del 20/10/2026 con las 6 métricas capturadas | Se descarga `reporte-salud-dashboard-sqa-corte-2-2026-10-20.pdf` (tipo `application/pdf`) | `test_reporte_pdf.py` › `test_por_omision_exporta_el_ultimo_corte`, `test_el_boton_descarga_el_corte_que_se_esta_viendo` |
+| CP-17-02 | Integración | Elegir el corte 1 en el selector y exportar | Dos cortes (06/10 y 20/10) | El PDF es del corte elegido, no del último | `test_reporte_pdf.py` › `test_exporta_el_corte_elegido`, `test_corte_de_otro_proyecto_usa_el_ultimo` |
+| CP-17-03 | Unitaria | Generar el PDF de un corte | 5 de 6 metas, una métrica sin medición, una técnica con evidencia y otra sin aplicar | El PDF lleva los mismos valores, metas («≥ 70 %»), «Sí»/«No», indicadores, aviso de medición faltante y el enlace de la evidencia | `test_reporte_pdf.py` › `ContenidoDelPdfTests`, `test_genera_un_pdf` |
+| CP-17-04 | Unitaria | Generar el PDF con datos raros | Proyecto sin métricas ni técnicas; nombre con `& < > "` y acentos | El PDF se genera sin errores y el nombre del archivo queda sin acentos ni símbolos | `test_reporte_pdf.py` › `test_proyecto_sin_metricas_ni_tecnicas`, `test_nombre_con_caracteres_especiales` |
+| CP-17-05 | Integración | Exportar el reporte de un proyecto sin cortes | Proyecto recién registrado | El botón está deshabilitado; si se abre la dirección, regresa al reporte con un aviso | `test_reporte_pdf.py` › `test_sin_cortes_el_boton_esta_deshabilitado`, `test_sin_cortes_regresa_al_reporte_con_aviso` |
+| CP-17-06 | Integración | Abrir la dirección del PDF sin sesión o de un proyecto que no existe | — | Sin sesión se redirige al login (RF-19); un proyecto inexistente da 404 | `test_reporte_pdf.py` › `test_sin_sesion_redirige_al_login`, `test_proyecto_inexistente_da_404` |
+
 ## RF-15 — Reporte de salud de un proyecto en un corte
 
 **Criterio de aceptación:** muestra semáforo general, tabla de métricas contra meta y cumplimiento de técnicas.
@@ -181,6 +194,7 @@ Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Djang
 
 | Requisito | Casos | Automatizados | Por automatizar (10.3) | Pendientes de implementar |
 |---|---|---|---|---|
+| RF-17 | 6 | 6 | 0 | 0 |
 | RF-15 | 13 | 13 | 0 | 0 |
 | Flujo completo | 6 | 6 | 0 | 0 |
 | RF-14 | 7 | 7 | 0 | 0 |
@@ -194,4 +208,4 @@ Recorre los módulos 1 a 4 por las pantallas, con el cliente de pruebas de Djang
 | RF-06 | 4 | 4 | 0 | 0 |
 | RF-05 | 4 | 4 | 0 | 0 |
 | RF-20 | 5 | 0 | 0 | 5 |
-| **Total** | **64** | **54** | **0** | **10** |
+| **Total** | **70** | **60** | **0** | **10** |
