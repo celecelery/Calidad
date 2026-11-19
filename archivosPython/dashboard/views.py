@@ -4,7 +4,10 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from . import plotly_app  # noqa: F401  (registra la aplicación Dash)
+from . import (
+    plotly_app,  # noqa: F401  (registra la aplicación Dash)
+    salud,
+)
 from .cumplimiento import cumplimiento_de_tecnicas
 from .forms import (
     AplicacionTecnicaForm,
@@ -586,6 +589,16 @@ def reporte_comparar(request, pk):
         }
     )
     
+
+def historial_salud(request, pk):
+    """RF-18: historial de reportes de salud del proyecto (un reporte por corte)."""
+    proyecto = _proyecto(pk)
+    return render(
+        request,
+        "dashboard/historial_salud.html",
+        {"proyecto": proyecto, "reportes": salud.historial_de_salud(proyecto)},
+    )
+
 
 def reporte_salud_pdf(request, pk):
     """RF-17: descarga en PDF el reporte de salud del corte elegido (por omisión, el último)."""

@@ -13,5 +13,5 @@
     <span class="tab off" aria-disabled="true" title="Próximamente (RF-09)">Evolución</span>
     <a class="tab{% if activa == 'tecnicas' %} on{% endif %}" href="{% url 'tecnicas_proyecto' proyecto.pk %}" {% if activa == 'tecnicas' %}aria-current="page"{% endif %}>Técnicas SQA</a>
     <a class="tab{% if activa == 'reporte' %} on{% endif %}" href="{% url 'reporte_salud' proyecto.pk %}" {% if activa == 'reporte' %}aria-current="page"{% endif %}>Reporte de salud</a>
-    <span class="tab off" aria-disabled="true" title="Próximamente (RF-18)">Historial</span>
+    <a class="tab{% if activa == 'historial' %} on{% endif %}" href="{% url 'historial_salud' proyecto.pk %}" {% if activa == 'historial' %}aria-current="page"{% endif %}>Historial</a>
 </nav>

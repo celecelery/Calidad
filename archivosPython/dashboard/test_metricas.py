@@ -310,8 +310,9 @@ class AsignacionMetricasTests(MetricasBaseVistaTest):
         respuesta = self.client.get(reverse("metricas_proyecto", args=[proyecto.pk]))
         self.assertContains(respuesta, f'href="{reverse("editar_proyecto", args=[proyecto.pk])}"')
         self.assertContains(respuesta, 'class="tab on"', count=1)
-        # Evolución (RF-09) e Historial (RF-18) siguen pendientes.
-        self.assertContains(respuesta, 'class="tab off"', count=2)
+        self.assertContains(respuesta, f'href="{reverse("historial_salud", args=[proyecto.pk])}"')
+        # Evolución (RF-09) sigue pendiente.
+        self.assertContains(respuesta, 'class="tab off"', count=1)
 
     def test_post_asigna_una_metrica(self):
         proyecto = self.crear_proyecto()
