@@ -77,13 +77,16 @@ Con Docker Desktop abierto, levanta solo el servicio de PostgreSQL del `docker-c
 docker compose up -d db
 ```
 
-La base queda en `localhost:5432` y sus datos se guardan aunque apagues la computadora. Cada vez que vayas a trabajar, revisa que Docker Desktop esté abierto y vuelve a correr este comando.
+* Para coleccionar los archivos estaticos para el uso de NGINX, usa el siguiente comando:
+```
+	docker compose run --rm web python manage.py collectstatic --noinput
+```
 
-### 6. Crear las tablas
-
+* Inicia la aplicación con el siguiente comando:
 ```
 python manage.py migrate
 ```
+ Y abre la aplicación en 'localhost'
 
 Esto crea las tablas y carga las métricas base (M-01 a M-06) y el catálogo de técnicas SQA.
 
@@ -95,20 +98,13 @@ Primero crea la cuenta con la que vas a iniciar sesión:
 python manage.py createsuperuser
 ```
 
-Después hay que darle el perfil de Administrador. Abre la consola de Django con `python manage.py shell` y escribe lo siguiente, cambiando el usuario y el nombre por los tuyos:
-
+* En caso de que haya problemas con las migraciones, utiliza el siguiente comando:
 ```
-from django.contrib.auth import get_user_model
-from dashboard.models import Usuario
-cuenta = get_user_model().objects.get(username="tu_usuario")
-Usuario.objects.create(user=cuenta, nombre="Tu nombre", perfil="administrador")
-exit()
+	docker compose exec web python manage.py makemigrations
 ```
+ y vuelve a ejecutar el comando de migraciones.
 
-Para los demás integrantes, crea su cuenta desde http://127.0.0.1:8000/admin/ (en Usuarios, Agregar) y luego dales el perfil de la misma forma, con `perfil="miembro"`.
-
-### 8. Iniciar el servidor
-
+* Para apagar la aplicación, utiliza el siguiente comando:
 ```
 python manage.py runserver
 ```
