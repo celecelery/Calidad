@@ -223,18 +223,9 @@ def comparar_corte_anterior(proyecto):
         return None
 
 def comparar_mediciones(proyecto, corte_actual, corte_previo):
-    mediciones_previas = {
-        m.metrica_id: m
-        for m in MetricaProyecto.objects.filter(proyecto=proyecto, corte=corte_previo).select_related(
-            "metrica"
-        )
-    }
-    mediciones_actuales = {
-        m.metrica_id: m
-        for m in MetricaProyecto.objects.filter(proyecto=proyecto, corte=corte_actual).select_related(
-            "metrica"
-        )
-    }    
+    mediciones_base = MetricaProyecto.objects.filter(proyecto=proyecto).select_related("metrica")
+    mediciones_previas = {m.metrica_id: m for m in mediciones_base.filter(corte=corte_previo)}
+    mediciones_actuales = {m.metrica_id: m for m in mediciones_base.filter(corte=corte_actual)}
     comparaciones = []
     for metrica_id in mediciones_actuales.keys():
         metrica_actual = mediciones_actuales.get(metrica_id)
@@ -244,7 +235,7 @@ def comparar_mediciones(proyecto, corte_actual, corte_previo):
                 "metrica_id": metrica_id,
                 "nombre": metrica_actual.metrica.nombre,
                 "indicador": 'Falta métrica previa'
-            });
+            })
             continue
         comparaciones.append(comparar_metrica(metrica_actual,metrica_previa))
     return comparaciones

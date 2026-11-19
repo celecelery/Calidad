@@ -31,7 +31,7 @@ from .models import (
     Usuario,
 )
 from .reporte_pdf import generar_pdf, nombre_archivo
-from .salud import reporte_de_salud, comparar_corte_anterior
+from .salud import comparar_corte_anterior, reporte_de_salud
 
 
 def obtener_perfil_usuario(request):
