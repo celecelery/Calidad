@@ -16,8 +16,8 @@
             <button class="btn primary" type="submit">Ver reporte</button>
         {% endif %}
         <div class="actions" style="margin-left: auto;">
-            {# RF-16 y RF-18 llegan en el sprint 3 #}
-            <button class="btn" type="button" disabled title="Próximamente (RF-18)" style="opacity: .55; cursor: not-allowed;">Guardar en historial</button>
+            {# RF-18: cada corte queda en el historial; el reporte se recalcula, no hace falta guardarlo #}
+            <a class="btn" href="{% url 'historial_salud' proyecto.pk %}" title="Reportes de todos los cortes del proyecto">Ver historial</a>
             {# RF-17: descarga el reporte del corte que se está viendo #}
             {% if reporte %}
                 <a class="btn" href="{% url 'reporte_salud_pdf' proyecto.pk %}?corte={{ reporte.corte.pk }}" title="Descargar el reporte del corte {{ reporte.numero_corte }} en PDF">Exportar PDF</a>

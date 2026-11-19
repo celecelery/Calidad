@@ -1,0 +1,41 @@
+{% extends "dashboard/base.html" %}
+
+{% block titulo %}Historial — {{ proyecto.nombre }}{% endblock %}
+
+{% block contenido %}
+{% include "dashboard/_pestanas_proyecto.html" with activa="historial" %}
+
+{# RF-18: un reporte de salud por corte, del más reciente al más antiguo #}
+{% if not reportes %}
+    <div class="alert warn">El proyecto todavía no tiene cortes, así que no hay reportes en el historial. <a href="{% url 'metricas_proyecto' proyecto.pk %}">Agrega un corte y captura sus mediciones</a>.</div>
+{% else %}
+    <div class="table-wrap">
+        <table class="sheet">
+            <thead>
+                <tr><th class="rn"></th><th>Corte</th><th>Fecha</th><th>Semáforo</th><th class="num">Metas cumplidas</th><th class="num">Defectos críticos</th><th class="num">Técnicas SQA</th><th>Reporte</th></tr>
+            </thead>
+            <tbody>
+                {% for reporte in reportes %}
+                    <tr>
+                        <td class="rn">{{ forloop.counter }}</td>
+                        <td>Corte {{ reporte.numero_corte }}{% if forloop.first %} <span class="pill gray">Último</span>{% endif %}</td>
+                        <td>{{ reporte.corte.fecha|date:"d/m/Y" }}</td>
+                        <td><span class="pill {% if reporte.clase == 'g' %}good{% elif reporte.clase == 'y' %}neutral{% else %}bad{% endif %}" title="{{ reporte.motivo }}"><span class="dot {{ reporte.clase }}"></span>{{ reporte.semaforo }}</span></td>
+                        <td class="num">{{ reporte.metas_cumplidas }} / {{ reporte.metas_total }}</td>
+                        <td class="num">{% if reporte.defectos_criticos is not None %}{{ reporte.defectos_criticos|floatformat:0 }}{% else %}—{% endif %}</td>
+                        <td class="num">{% if reporte.porcentaje_tecnicas is not None %}{{ reporte.porcentaje_tecnicas|floatformat:0 }} %{% else %}—{% endif %}</td>
+                        <td>
+                            <a href="{% url 'reporte_salud' proyecto.pk %}?corte={{ reporte.corte.pk }}">Ver reporte</a>
+                            · <a href="{% url 'reporte_salud_pdf' proyecto.pk %}?corte={{ reporte.corte.pk }}">PDF</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="help" style="margin: 10px 0 0;">Cada reporte se calcula con las mediciones y técnicas registradas hasta la fecha de su corte. Si se corrige una medición, el reporte de ese corte se actualiza.</p>
+{% endif %}
+{% endblock %}
+
+{% block estado %}{{ reportes|length }} corte{{ reportes|length|pluralize }} en el historial{% endblock %}
+{% block estado_derecha %}Del más reciente al más antiguo{% endblock %}

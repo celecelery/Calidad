@@ -16,6 +16,8 @@ aplicaciones de técnicas esperadas), ese dato no vuelve Rojo al proyecto, pero 
 puede confirmar el Verde: el semáforo queda como máximo en Amarillo y el motivo lo dice.
 
 ``semaforo_actual(proyecto)`` da el reporte del último corte; lo usa el dashboard (RF-10).
+``historial_de_salud(proyecto)`` da el reporte de cada corte, del más reciente al más antiguo
+(RF-18).
 """
 
 from dataclasses import dataclass, field
@@ -76,7 +78,11 @@ class FilaMetrica:
 
 @dataclass
 class ReporteSalud:
-    """Reporte de salud calculado (no se guarda; el historial es RF-18)."""
+    """Reporte de salud calculado.
+
+    No se guarda: se recalcula a partir de las mediciones y aplicaciones del corte, así que el
+    historial (RF-18) es la lista de cortes con su reporte y siempre coincide con los datos.
+    """
 
     proyecto: object
     corte: object
@@ -269,3 +275,9 @@ def semaforo_actual(proyecto):
     """Reporte de salud del último corte del proyecto, o None si todavía no tiene cortes."""
     ultimo = proyecto.cortes.last()
     return reporte_de_salud(proyecto, ultimo) if ultimo else None
+
+
+def historial_de_salud(proyecto):
+    """RF-18: reporte de salud de cada corte del proyecto, del más reciente al más antiguo."""
+    cortes = list(proyecto.cortes.all())
+    return [reporte_de_salud(proyecto, corte) for corte in reversed(cortes)]
